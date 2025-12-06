@@ -777,7 +777,7 @@
             const current_week = Math.floor((gameState.day - 1) / 7);
             const next_tax_day = (current_week + 1) * 7;
             const daysUntilTax = next_tax_day - gameState.day;
-            const nextTaxAmount = 20 * Math.pow(2, (next_tax_day / 7) - 1);
+            const nextTaxAmount = 2 * Math.pow(2, (next_tax_day / 7) - 1);
             let taxDisplay = `Tax in ${daysUntilTax} days: ${nextTaxAmount}g`;
             if(daysUntilTax === 0){
                 taxDisplay = `Tax today: ${nextTaxAmount}g`;
