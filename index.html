@@ -952,7 +952,7 @@
             const evDay=gameState.day; gameState.day++;
             // Pay tax if end of tax day
             if (evDay % 7 === 0) {
-                const tax = 50 * Math.pow(2, (evDay / 7) - 1);
+                const tax = 2 * Math.pow(2, (evDay / 7) - 1);
                 gameState.gold -= tax;
                 checkGameOver();
             }
