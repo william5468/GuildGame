@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guild Master Game - Fully Fixed</title>
+    <title>ギルドマスターゲーム - 完全修正版</title>
     <style>
-        body {font-family: Arial, sans-serif; margin: 20px; background:#f4f4f4;}
+        body {font-family: 'Hiragino Sans', 'Yu Gothic', Arial, sans-serif; margin: 20px; background:#f4f4f4;}
         h1 {color:#2c3e50; text-align:center;}
         h2, h3 {color:#34495e;}
         div {margin-bottom:20px; padding:15px; background:white; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);}
@@ -18,12 +18,12 @@
         .buttons {display:flex; justify-content:center; gap:10px; margin:20px 0;}
         .stats {font-size:0.85em; color:#555;}
         .adventurer-img {
-            width: 40px;      /* Fixed width for uniformity */
-            height: 40px;     /* Fixed height for square uniformity */
+            width: 60px; /* Increased for larger UI */
+            height: 60px; /* Fixed height for square uniformity */
             border-radius: 4px;
             vertical-align: middle;
             margin-right: 8px;
-            object-fit: contain;  /* Preserves ratio, fits in box without crop/distort */
+            object-fit: contain; /* Preserves ratio, fits in box without crop/distort */
             display: inline-block; /* Ensures consistent inline behavior */
         }
         .stat-icon {
@@ -33,29 +33,25 @@
             margin: 0 2px;
         }
         .progress-bar {
-            width: 150px;          /* Even smaller fixed width – minimizes grey area overall */
-            height: 2px;          /* Ultra-thin height for minimal visual footprint */
-            background: #ddd;     /* Grey track – now barely noticeable due to small size */
-            border-radius: 1px;   /* Tiny radius for clean edges */
+            width: 150px; /* Even smaller fixed width – minimizes grey area overall */
+            height: 2px; /* Ultra-thin height for minimal visual footprint */
+            background: #ddd; /* Grey track – now barely noticeable due to small size */
+            border-radius: 1px; /* Tiny radius for clean edges */
             overflow: hidden;
-            margin: 1px 0;        /* Tight spacing */
+            margin: 1px 0; /* Tight spacing */
             display: inline-block;
             vertical-align: middle;
         }
-
         .progress-fill {
-            height: 100%;         /* Matches outer height */
-            border-radius: 1px;   /* Matches outer */
+            height: 100%; /* Matches outer height */
+            border-radius: 1px; /* Matches outer */
             transition: width 0.3s ease;
-            background: #4caf50;  /* Default green (for EXP if needed) */
+            background: #4caf50; /* Default green (for EXP if needed) */
         }
-
-        .mp-fill {background: #2196f3;}    /* Blue for MP */
-        .exp-fill {background: #ff9800;}  /* Orange for EXP */
-
+        .mp-fill {background: #2196f3;} /* Blue for MP */
+        .exp-fill {background: #ff9800;} /* Orange for EXP */
         /* NEW: Add red class for HP fills */
-        .hp-fill {background: #f44336;}   /* Red for HP – standard Material red */
-
+        .hp-fill {background: #f44336;} /* Red for HP – standard Material red */
         .adventurer-card {
             display:inline-block; width:200px; margin:8px; padding:10px;
             background:#ecf0f1; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.15);
@@ -64,15 +60,21 @@
         .adventurer-card:active {cursor:grabbing;}
         .adventurer-card:hover {transform:translateY(-4px); box-shadow:0 6px 12px rgba(0,0,0,0.2);}
         .adventurer-card.dragging {opacity:0.5; transform:rotate(5deg);}
-
         .quest-card {
             margin:8px 0; padding:8px; background:#f9f9f9; border:2px solid #ddd; border-radius:8px;
             min-height:80px; transition:border 0.3s;
+        }
+        .quest-card.side {
+            background: #f0f0f0;
+            color: #666;
+            border-color: #ccc;
         }
         .quest-card.kill { border-left: 4px solid #ff0000; }
         .quest-card.discovery { border-left: 4px solid #0000ff; }
         .quest-card.escort { border-left: 4px solid #00ff00; }
         .quest-card.fetch { border-left: 4px solid #ffff00; }
+        .quest-card.defense { border-left: 4px solid #ff4500; background: #fff5ee; }
+        .quest-card.training { border-left: 4px solid #9b59b6; background: #f5e6ff; }
         .quest-card h3 {font-size: 1em; margin: 0 0 4px 0;}
         .quest-card p {font-size: 0.85em; margin: 2px 0;}
         .quest-card.drag-over {border:2px dashed #3498db; background:#e3f2fd;}
@@ -86,8 +88,7 @@
         }
         .cancel-btn:hover {background: #c0392b;}
         .in-progress {color: #e74c3c; font-style: italic;}
-
-        #eventModal, #shopModal, #charactersModal {
+        #eventModal, #shopModal, #charactersModal, #npcsModal, #battleModal {
             display: none;
             position: fixed;
             top: 0;
@@ -108,6 +109,7 @@
             max-height: 70vh;
             overflow-y: auto;
         }
+        #battleModal .modal-content { max-width: 1400px; max-height: 90vh; } /* Larger for horizontal display */
         .modal-buttons {
             text-align: center;
             margin-top: 10px;
@@ -115,12 +117,145 @@
         .modal-buttons button {
             margin: 5px;
         }
+        .battle-section { margin-bottom: 20px; }
+        .battle-section ul { list-style: none; padding: 0; }
+        .battle-section li { margin: 10px 0; padding: 10px; background: #f9f9f9; border-radius: 4px; }
+        .team-member { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .actions { margin-top: 5px; font-size: 0.9em; }
+        .target-buttons button { margin: 2px; padding: 4px 8px; font-size: 0.8em; }
+        .battle-enemies {
+            display: flex;
+            justify-content: center; /* Center for better horizontal alignment */
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        .battle-enemy {
+            background: #ffebee;
+            border: 2px solid #f44336;
+            border-radius: 8px;
+            padding: 15px; /* Slightly more padding */
+            text-align: center;
+            min-width: 140px; /* Increased for larger UI */
+            box-shadow: 0 2px 6px rgba(244, 67, 54, 0.2);
+            font-weight: bold;
+            color: #d32f2f;
+            cursor: default;
+            transition: border-color 0.2s;
+            position: relative;
+        }
+        .battle-enemy.selectable {
+            cursor: pointer;
+            border-color: #2196f3; /* Blue highlight when selectable */
+        }
+        .battle-enemy .progress-bar {
+            margin: 4px auto;
+            display: block;
+            width: 100%; /* Full width in container */
+            max-width: 120px; /* Cap to avoid overflow */
+        }
+        .enemy-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto 8px;
+            border-radius: 8px;
+        }
+        .battle-team {
+            display: flex;
+            justify-content: center; /* Center for better alignment */
+            gap: 20px; /* Increased gap */
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        .team-member {
+            flex: none;
+            min-width: 180px; /* Increased for larger UI */
+            max-width: 220px;
+            margin: 5px;
+            padding: 15px; /* More padding */
+            border: 2px solid #2196f3;
+            border-radius: 8px;
+            background: #e3f2fd;
+            box-shadow: 0 2px 6px rgba(33, 150, 243, 0.2);
+            text-align: center;
+            position: relative;
+        }
+        .team-member .adventurer-card {
+            margin-bottom: 8px;
+            background: transparent;
+            box-shadow: none;
+            border: none;
+            padding: 0;
+            cursor: default;
+        }
+        .team-member .adventurer-card:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        .actions {
+            font-size: 0.85em;
+        }
+        #battleLog {
+            max-height: 250px;
+            overflow-y: auto;
+            background: #fafafa;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #9e9e9e;
+            font-family: monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+            margin: 10px 0;
+        }
+        .battle-section h3 {
+            margin-bottom: 12px;
+            text-align: center;
+            color: #2c3e50;
+        }
+        .battle-top {
+            text-align: center;
+            margin: 10px 0;
+        }
+        .damage-popup {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff0000;
+            font-weight: bold;
+            font-size: 18px;
+            pointer-events: none;
+            z-index: 10;
+            animation: damageFade 0.8s ease-out forwards;
+        }
+        @keyframes damageFade {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) translateY(-30px);
+            }
+        }
+        .char-nav {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .char-nav button {
+            margin: 0 10px;
+        }
     </style>
 </head>
 <body>
-    <h1>Guild Master</h1>
+    <h1>ギルドマスター</h1>
+    <audio id="bgm" loop preload="auto">
+        <source src="bgm.mp3" type="audio/mpeg">
+        ブラウザがオーディオをサポートしていません。
+    </audio>
     <div id="day"></div>
-
     <div class="main">
         <div class="left">
             <div id="recruits"></div>
@@ -130,195 +265,272 @@
             <div id="quests"></div>
         </div>
     </div>
-
     <div class="buttons">
-        <button onclick="saveGame()">Save</button>
-        <button onclick="loadGame()">Load</button>
-        <button onclick="toggleShop()">Shop</button>
-        <button onclick="toggleCharacters()">Characters</button>
-        <button onclick="playDay()">End Day & Send Adventurers</button>
+        <button onclick="saveGame()">保存</button>
+        <button onclick="loadGame()">読み込み</button>
+        <button onclick="toggleShop()">店</button>
+        <button onclick="toggleCharacters()">キャラクター</button>
+        <button onclick="toggleNPCs()">NPC</button>
+        <button onclick="playDay()">日終了 & 冒険者派遣</button>
     </div>
-
     <div id="eventModal">
         <div class="modal-content">
             <h2 id="modalTitle"></h2>
             <div id="modalContent"></div>
             <div class="modal-buttons">
-                <button id="prevBtn" onclick="prevPage()">Previous</button>
+                <button id="prevBtn" onclick="prevPage()">前</button>
                 <span id="pageInfo"></span>
-                <button id="nextBtn" onclick="nextPage()">Next</button>
-                <button onclick="closeModal()">Close</button>
+                <button id="nextBtn" onclick="nextPage()">次</button>
+                <button onclick="closeModal()">閉じる</button>
             </div>
         </div>
     </div>
-
     <div id="shopModal">
         <div class="modal-content">
-            <h2>Shop</h2>
+            <h2>店</h2>
             <div id="shopContent"></div>
             <div class="modal-buttons">
-                <button onclick="closeShop()">Close</button>
+                <button onclick="closeShop()">閉じる</button>
             </div>
         </div>
     </div>
-
     <div id="charactersModal">
         <div class="modal-content">
-            <h2>Characters</h2>
+            <h2>キャラクター</h2>
             <div id="charactersContent"></div>
             <div class="modal-buttons">
-                <button onclick="closeCharacters()">Close</button>
+                <button onclick="closeCharacters()">閉じる</button>
             </div>
         </div>
     </div>
-
+    <div id="npcsModal">
+        <div class="modal-content">
+            <h2>NPC</h2>
+            <div id="npcsContent"></div>
+            <div class="modal-buttons">
+                <button onclick="closeNPCs()">閉じる</button>
+            </div>
+        </div>
+    </div>
+    <div id="battleModal">
+        <div class="modal-content">
+            <h2 id="battleTitle">防衛戦</h2>
+            <div id="battleContent"></div>
+            <div class="modal-buttons">
+                <button onclick="closeBattle()">閉じる</button>
+            </div>
+        </div>
+    </div>
     <script>
-        const gameState = {
+        const strSound = new Audio('STR_Attack.mp3');
+        const wisSound = new Audio('WIS_Attack.mp3');
+        let currentCharIndex = 0;
+        gameState = {
             day: 1,
             gold: 1000,
             reputation: 10,
             adventurers: [],
             quests: [],
             inventory: [],
+            sellables: [],
             recruitPending: [],
             eventHistory: [],
             nextId: 0,
             maxPermanentSlots: 4,
-            gameOver: false
+            gameOver: false,
+            discoveredNPCs: [],
+            receivedNPCs: [],
+            discoveryMultiplier: 10
         };
-
         const statIcons = {
             strength: 'STR',
             wisdom: 'WIS',
             dexterity: 'DEX',
             luck: 'LUC'
         };
-
+        const statFull = {
+            strength: '筋力',
+            wisdom: '知恵',
+            dexterity: '敏捷',
+            luck: '運'
+        };
         const statColors = {
             0: '#ff0000', // STR: Red
             1: '#0000ff', // WIS: Blue
             2: '#00ff00', // DEX: Green
-            3: '#ffff00'  // LUC: Yellow
+            3: '#ffff00' // LUC: Yellow
         };
-
         const maleNames = [
-            'Garrick', 'Thorne', 'Korvin', 'Draven', 'Finn',
-            'Aldric', 'Borin', 'Caelan', 'Darian', 'Eldric',
-            'Faron', 'Gideon', 'Hadrian', 'Jorah', 'Kael',
-            'Lorcan', 'Marek', 'Nolan', 'Orin', 'Roric'
+            'アキラ', 'ハルト', 'ケン', 'リュウ', 'ソラ',
+            'タイチ', 'ユウト', 'カズキ', 'リョウ', 'ショウ',
+            'トモヤ', 'ダイキ', 'ヒロ', 'マサト', 'ナオキ',
+            'ユウキ', 'レイ', 'セイジ', 'タカシ', 'ノブ'
         ];
-
         const femaleNames = [
-            'Elara', 'Lirael', 'Sylva', 'Mira', 'Lena',
-            'Aeliana', 'Brienne', 'Celeste', 'Dahlia', 'Elowen',
-            'Fiona', 'Giselle', 'Halia', 'Isolde', 'Juniper',
-            'Kira', 'Lyra', 'Maeve', 'Niamh', 'Ophelia'
+            'アヤカ', 'ハルカ', 'ミカ', 'サクラ', 'ユイ',
+            'リナ', 'モモ', 'ナナ', 'ユナ', 'アカリ',
+            'ヒナタ', 'ソラ', 'ミユ', 'リコ', 'サヤ',
+            'マユ', 'ノゾミ', 'ルナ', 'エマ', 'キラ'
         ];
-
+        const discoveryNPCs = [
+            '地図の賢者 エルドリン',
+            '歴史の語り部 タリア',
+            '深海の探求者 コルバト',
+            '反響の予見者 シララ',
+            '星の観測者 アストリッド',
+            '森のドルイド リオラ',
+            '灰の学者 ボルカン',
+            '幻の舞姫 ザラ',
+            '宝石の彫刻師 トーン',
+            '永遠の守護者 フェイ'
+        ];
+        const enemyConfigs = [
+            {ja: '暗殺者（男）', en: 'Assassin(M)'},
+            {ja: '暗殺者（女）', en: 'Assassin(F)'},
+            {ja: 'ハンター（男）', en: 'Hunter(M)'},
+            {ja: 'ハンター（女）', en: 'Hunter(F)'},
+        ];
         const killDescs = [
-            'Slay 10 Dire Wolves terrorizing the northern farms. Their howls keep the livestock awake.',
-            'Hunt the Rogue Gargoyle in the Abandoned Tower. It steals gems from travelers.',
-            'Eliminate 8 Bandit Outlaws from the Highway Camps. They\'ve ambushed too many caravans.',
-            'Defeat the Swamp Hydra in the Murkwater Bog. Regrows heads if not cauterized.',
-            'Bounty on 15 Goblin Raiders at the Mountain Pass. Stockpiling weapons for invasion.',
-            'Kill the Frost Wurm in the Icy Tundra. Freezes rivers, causing floods downstream.',
-            'Exterminate 12 Shadow Spiders from the Darkwood. Their venom paralyzes victims.',
-            'Take down the Iron Golem guarding the old forge. Malfunctioning and rampaging.',
-            'Slaughter 7 Orc Brutes in the Crimson Caves. Planning a raid on the dwarf mines.',
-            'Bounty: The Necromancer\'s Skeletal Champion in the Graveyard Ruins. Raising the dead.'
+            '北の農場を荒らす10頭の凶暴な狼を討伐せよ。彼らの遠吠えが家畜を眠れなくしている。',
+            '放棄された塔の不正なガーゴイルを狩れ。旅行者から宝石を盗んでいる。',
+            'ハイウェイキャンプの8人の盗賊アウトローを排除せよ。キャラバンを待ち伏せしすぎだ。',
+            'マークウォーターボグの沼のヒドラを倒せ。頭を焼却しないと再生する。',
+            '山道の15人のゴブリン襲撃者を懸賞金で。侵略のための武器を備蓄中。',
+            '氷のツンドラのフロストワームを殺せ。川を凍らせ、下流に洪水を引き起こす。',
+            'ダークウッドの12匹の影の蜘蛛を根絶せよ。毒が犠牲者を麻痺させる。',
+            '古い鍛冶を守る鉄のゴーレムを倒せ。故障して暴走中。',
+            'クリムゾンケイブの7人のオークの野蛮人を虐殺せよ。ドワーフ鉱山への襲撃を計画中。',
+            '墓地遺跡のネクロマンサーの骸骨チャンピオンに懸賞金。死者を蘇らせる。'
         ];
-
         const discoveryDescs = [
-            'Map the hidden paths in the Labyrinthine Canyons. Legends of treasure untold.',
-            'Uncover the Lost Temple of Stars in the Desert Dunes. Aligns with constellations.',
-            'Find the Sunken Ruins beneath the Azure Lake. Ancient aquatic civilization.',
-            'Discover the Echoing Caves\' secret chamber. Whispers reveal prophecies.',
-            'Locate the Forgotten Observatory on the Cloudpeak. Views the multiverse.',
-            'Explore the Whispering Woods for the Heart Tree. Source of all forest magic.',
-            'Unearth the Buried Observatory in the Ashen Wastes. Volcanic anomalies.',
-            'Find the Mirage Oasis in the Endless Sands. Illusion or reality?',
-            'Chart the Crystal Caverns\' glowing veins. Power source for artifacts.',
-            'Reveal the hidden grove in the Thornwall Maze. Eternal youth blooms there.'
+            '迷宮のような峡谷の隠された道を地図化せよ。伝説の宝の噂。',
+            '砂漠の砂丘の失われた星の神殿を発掘せよ。星座に一致する。',
+            'アジュール湖の下の沈んだ遺跡を見つけよ。古代の水生文明。',
+            'エコーケイブの秘密の間を発見せよ。ささやきが予言を明らかにする。',
+            'クラウドピークの忘れられた天文台を位置づけよ。多宇宙を眺める。',
+            'ウィスパリングウッドのハートツリーを探検せよ。すべての森の魔法の源。',
+            'アッシェンウェイストの埋もれた天文台を発掘せよ。火山の異常。',
+            'エンドレスサンドのミラージュオアシスを見つけよ。幻か現実か？',
+            'クリスタルカーブンの輝く鉱脈をチャートせよ。アーティファクトの力源。',
+            'ソーンウォールメイズの隠されたグローブを発見せよ。永遠の若さが咲く。'
         ];
-
         const escortDescs = [
-            'Escort the wounded scout back to camp through bandit territory. He carries vital maps.',
-            'Guide the merchant caravan safely across the Storm Plains. Lightning strikes are frequent.',
-            'Protect the scholar to the Forbidden Archives. Hidden traps and guardians await.',
-            'Escort the orphan to her aunt in the besieged village. Wolves prowl the paths.',
-            'Safely deliver the diplomat through enemy lines to the peace summit.',
-            'Guard the priestess across the Cursed Bridge. Spirits attack the impure.',
-            'Escort the engineer to the dam site. Saboteurs lurk in the hills.',
-            'Protect the traveling performer through the Haunted Forest. Ghosts jealous of her voice.',
-            'Guide the refugees to the safe haven beyond the warzone. Soldiers patrol aggressively.',
-            'Escort the rare beast tamer and his creatures to the arena. Poachers on the trail.'
+            '負傷した斥候を盗賊の領土を通ってキャンプに戻す護衛せよ。彼は重要な地図を持っている。',
+            '商人キャラバンをストームプレインズを安全に横断するガイドせよ。雷撃が頻繁。',
+            '学者を禁断のアーカイブまで護衛せよ。隠された罠と守護者が待つ。',
+            '孤児を狼がうろつく道を通って包囲された村の叔母まで護衛せよ。',
+            '外交官を敵の線を通って平和サミットまで安全に届ける。',
+            '女司祭を呪われた橋を横断する護衛せよ。不浄な者を霊が攻撃。',
+            'エンジニアをダムサイトまで護衛せよ。破壊工作員が丘に潜む。',
+            '旅の芸人をホーンテッドフォレストを通る護衛せよ。ゴーストが彼女の声に嫉妬。',
+            '難民を戦争地帯を超えた安全な避難所までガイドせよ。兵士が積極的に巡回。',
+            '珍しい獣使いと彼の生き物をアリーナまで護衛せよ。密猟者が道に。'
         ];
-
         const fetchDescs = [
-            'The alchemist in Eldoria needs 5 Glowcap Mushrooms from the Whispering Caves. Rare fungi that shimmer in the dark.',
-            'Village elder seeks a Golden Feather from the Skyreach Peaks. Said to grant visions of the future.',
-            'Blacksmith requires 3 Crystal Shards from the Frozen Depths. Perfect for forging enchanted blades.',
-            'Healer asks for Moonbloom Petals from the Enchanted Grove at midnight. Cure for the plague.',
-            'Merchant wants a Dragon Scale from the Volcanic Ruins. Tougher than any armor.',
-            'Sage needs Ancient Scroll fragments from the Buried Library. Lost knowledge of old gods.',
-            'Innkeeper seeks Rare Spices from the Desert Bazaar. Secret to the legendary stew.',
-            'Hunter requires Ghost Wolf Pelt from the Foggy Marshes. Invisible in moonlight.',
-            'Enchanter asks for Starfall Ore from the Meteor Crater. Infused with cosmic power.',
-            'Farmer needs Mana Berries from the Feywild Orchards. Boosts crop yields tenfold.'
+            'エルドリアの錬金術師がウィスパリングケイブから5つのグローキャップキノコを必要とする。暗闇で輝く珍しい菌類。',
+            '村長がスカイリーチピークからゴールデンフェザーを求める。未来のビジョンを与えると言われる。',
+            '鍛冶屋がフローズンデプスから3つのクリスタルシャードを必要とする。魔法の刃を鍛造するのに完璧。',
+            'ヒーラーが真夜中のエンチャンテッドグローブからムーンブルームペタルを求める。疫病の治療。',
+            '商人がボルカニックルインズからドラゴンスケールを欲しがる。どんな鎧よりも頑丈。',
+            '賢者がバリードライブラリーからエンシェントスクロール断片を必要とする。古の神々の失われた知識。',
+            '宿屋の主人がデザートバザールからレアスパイスを求める。伝説のシチューの秘密。',
+            'ハンターがフォッギーマーシュからゴーストウルフペルトを必要とする。月明かりで不可視。',
+            'エンチャンターがメテオークレーターからスターファルオーレを求める。宇宙の力で注入。',
+            '農夫がフェイワイルドオーチャードからマナベリーを必要とする。作物の収穫を10倍に増加。'
         ];
-
-        const questTypeDescs = [killDescs, discoveryDescs, escortDescs, fetchDescs];
-        const questTypeClasses = ['kill', 'discovery', 'escort', 'fetch'];
-
+        const defenseDescs = [
+            'ギルドが謎の侵略者に襲われています！急いで防衛を！',
+            '敵の軍勢がギルドの門を叩いています。冒険者たちよ、立ち上がれ！',
+            '闇の勢力がギルドを包囲。防衛戦が始まる！',
+            '野蛮なモンスターの群れがギルドを急襲！防衛せよ！',
+            'スパイと暗殺者がギルドに侵入。迎え撃て！'
+        ];
+        const fetchItems = [
+            {name: 'グローキャップキノコ', minPrice: 40, maxPrice: 60},
+            {name: 'ゴールデンフェザー', minPrice: 70, maxPrice: 100},
+            {name: 'クリスタルシャード', minPrice: 60, maxPrice: 90},
+            {name: 'ムーンブルームペタル', minPrice: 50, maxPrice: 80},
+            {name: 'ドラゴンスケール', minPrice: 120, maxPrice: 180},
+            {name: 'エンシェントスクロール断片', minPrice: 100, maxPrice: 150},
+            {name: 'レアスパイス', minPrice: 30, maxPrice: 50},
+            {name: 'ゴーストウルフペルト', minPrice: 80, maxPrice: 110},
+            {name: 'スターファルオーレ', minPrice: 90, maxPrice: 130},
+            {name: 'マナベリー', minPrice: 40, maxPrice: 70}
+        ];
+        const questTypeDescs = [killDescs, discoveryDescs, escortDescs, fetchDescs, defenseDescs];
+        const questTypeClasses = ['kill', 'discovery', 'escort', 'fetch', 'defense', 'training'];
         const shopItems = [
             // Strength items
-            {name:'Basic Sword', cost:50, stat:'strength', bonus:3},
-            {name:'Iron Sword', cost:100, stat:'strength', bonus:5},
-            {name:'Steel Sword', cost:200, stat:'strength', bonus:8},
+            {name:'基本の剣', cost:50, stat:'strength', bonus:3},
+            {name:'鉄の剣', cost:100, stat:'strength', bonus:5},
+            {name:'鋼の剣', cost:200, stat:'strength', bonus:8},
             // Wisdom items
-            {name:'Apprentice\'s Tome', cost:40, stat:'wisdom', bonus:3},
-            {name:'Sage\'s Scroll', cost:90, stat:'wisdom', bonus:5},
-            {name:'Ancient Grimoire', cost:180, stat:'wisdom', bonus:8},
+            {name:'見習いの書物', cost:40, stat:'wisdom', bonus:3},
+            {name:'賢者の巻物', cost:90, stat:'wisdom', bonus:5},
+            {name:'古代のグリモア', cost:180, stat:'wisdom', bonus:8},
             // Dexterity items
-            {name:'Leather Gloves', cost:30, stat:'dexterity', bonus:2},
-            {name:'Chain Bracers', cost:80, stat:'dexterity', bonus:4},
-            {name:'Elven Boots', cost:150, stat:'dexterity', bonus:7},
+            {name:'革の手袋', cost:30, stat:'dexterity', bonus:2},
+            {name:'鎖のブラサー', cost:80, stat:'dexterity', bonus:4},
+            {name:'エルフのブーツ', cost:150, stat:'dexterity', bonus:7},
             // Luck items
-            {name:'Lucky Coin', cost:60, stat:'luck', bonus:4},
-            {name:'Rabbit\'s Foot', cost:120, stat:'luck', bonus:6},
-            {name:'Four-Leaf Clover', cost:240, stat:'luck', bonus:9}
+            {name:'幸運のコイン', cost:60, stat:'luck', bonus:4},
+            {name:'兎の足', cost:120, stat:'luck', bonus:6},
+            {name:'四つ葉のクローバー', cost:240, stat:'luck', bonus:9},
+            // Potions
+            {name:'HPポーション', cost:25, type:'potion', restore:'hp', amount:30},
+            {name:'MPポーション', cost:35, type:'potion', restore:'mp', amount:20}
         ];
-
+        let currentBattle = null;
+        let currentSelectingAdvId = null;
+        function cleanupAdventurers() {
+            // Remove expired temps
+            gameState.adventurers = gameState.adventurers.filter(a => !(a.temp && !a.busy && a.generatedDay < gameState.day));
+            // Clean assigned in quests
+            gameState.quests.forEach(q => {
+                q.assigned = q.assigned.filter(id => {
+                    const adv = findAdv(id);
+                    if (!adv) return false;
+                    if (adv.temp && !adv.busy && adv.generatedDay < gameState.day) {
+                        // Remove expired temp
+                        const idx = gameState.adventurers.findIndex(a => a.id === id);
+                        if (idx > -1) gameState.adventurers.splice(idx, 1);
+                        return false;
+                    }
+                    return true;
+                });
+            });
+            // Also for recruitPending, filter expired
+            gameState.recruitPending = gameState.recruitPending.filter(adv => adv.generatedDay >= gameState.day - 2);
+        }
         function saveGame() {
             localStorage.setItem('guildMasterSave', JSON.stringify(gameState));
-            alert('Game saved!');
+            alert('ゲームを保存しました！');
         }
-
         function loadGame() {
             const saved = localStorage.getItem('guildMasterSave');
             if (saved) {
                 Object.assign(gameState, JSON.parse(saved));
+                cleanupAdventurers();
                 checkGameOver();
                 updateDisplays();
-                alert('Game loaded!');
+                ensureTrainingQuest();            
+                alert('ゲームを読み込みました！');
             } else {
-                alert('No save found!');
+                alert('セーブデータが見つかりません！');
             }
         }
-
         function spendGold(amount) {
             if (gameState.gold < amount) {
-                alert("Not enough gold");
+                alert("ゴールドが不足しています");
                 return false;
             }
             gameState.gold -= amount;
             checkGameOver();
             return true;
         }
-
         function corrupt() {
             if (gameState.reputation < 10) {
-                alert("Not enough reputation");
+                alert("評判が不足しています");
                 return;
             }
             gameState.reputation -= 10;
@@ -326,23 +538,21 @@
             checkGameOver();
             updateDisplays();
         }
-
         function checkGameOver() {
             if (gameState.gameOver) return;
             if (gameState.gold <= 0 || gameState.reputation <= 0) {
-                const reason = gameState.gold <= 0 ? "insufficient funds" : "zero reputation";
-                alert(`Game Over! The guild has collapsed due to ${reason}.`);
+                const reason = gameState.gold <= 0 ? "資金不足" : "評判ゼロ";
+                alert(`ゲームオーバー！ギルドは${reason}により崩壊しました。`);
                 gameState.gameOver = true;
                 const endBtn = document.querySelector('button[onclick="playDay()"]');
                 if (endBtn) endBtn.disabled = true;
                 updateDisplays();
             }
         }
-
         function buyExpansion() {
             const current = gameState.maxPermanentSlots;
             if (current >= 12) {
-                alert('Maximum expansion reached');
+                alert('最大拡張に達しました');
                 return;
             }
             const next = current + 1;
@@ -352,16 +562,14 @@
             gameState.maxPermanentSlots = next;
             updateDisplays();
         }
-
         function randomName(gender){
             const names = gender === 'M' ? maleNames : femaleNames;
             return names[Math.floor(Math.random()*names.length)];
         }
-
         function generateQuest(){
-            const repFactor = Math.max(0, gameState.reputation);  // Avoid negative rep affecting it
+            const repFactor = Math.max(0, gameState.reputation); // Avoid negative rep affecting it
             const minDiff = 1;
-            const maxDiff = Math.min(100, Math.floor(repFactor / 3.5) + 1);  // Gradually increase max difficulty with reputation
+            const maxDiff = Math.min(100, Math.floor(repFactor / 3.5) + 1); // Gradually increase max difficulty with reputation
             const difficulty = minDiff + Math.floor(Math.random() * (maxDiff - minDiff + 1));
             const primary = Math.floor(Math.random()*4);
             let minStrength=0,minWisdom=0,minDexterity=0,minLuck=0;
@@ -370,7 +578,19 @@
             else if(primary===2){minDexterity = Math.floor(Math.random()*10 + difficulty*5); minStrength = Math.floor(Math.random()*5 + difficulty*2); minWisdom = Math.floor(Math.random()*5 + difficulty*2); minLuck = Math.floor(Math.random()*3 + difficulty);}
             else{minLuck = Math.floor(Math.random()*10 + difficulty*5); minStrength = Math.floor(Math.random()*3 + difficulty); minWisdom = Math.floor(Math.random()*3 + difficulty); minDexterity = Math.floor(Math.random()*5 + difficulty*2);}
             const descs = questTypeDescs[primary];
-            const desc = descs[Math.floor(Math.random() * descs.length)];
+            let desc;
+            let item = null;
+            let npcIdx = null;
+            if (primary === 1) {
+                npcIdx = Math.floor(Math.random() * discoveryDescs.length);
+                desc = discoveryDescs[npcIdx];
+            } else if (primary === 3) {
+                const itemIdx = Math.floor(Math.random() * fetchDescs.length);
+                desc = fetchDescs[itemIdx];
+                item = {...fetchItems[itemIdx]};
+            } else {
+                desc = descs[Math.floor(Math.random() * descs.length)];
+            }
             const focusStat = ['strength', 'wisdom', 'dexterity', 'luck'][primary];
             const minFocus = primary === 0 ? minStrength : primary === 1 ? minWisdom : primary === 2 ? minDexterity : minLuck;
             return {
@@ -381,13 +601,129 @@
                 focusStat: focusStat,
                 minFocus: minFocus,
                 type: primary,
+                item: item,
+                npcIdx: npcIdx,
                 daysLeft: 7 + Math.floor(Math.random() * 8),
                 reward: difficulty*100,
                 assigned:[],
                 inProgress: false
             };
         }
+        function generateDefenseQuest() {
+            const repFactor = Math.max(0, gameState.reputation);
+            const difficulty = 1;
+            const primary = 2; // Focus on dexterity for defense
+            let minStrength = Math.floor(Math.random() * 5 + difficulty * 2);
+            let minWisdom = Math.floor(Math.random() * 5 + difficulty * 2);
+            let minDexterity = Math.floor(Math.random() * 10 + difficulty * 5);
+            let minLuck = Math.floor(Math.random() * 3 + difficulty);
+            const desc = defenseDescs[Math.floor(Math.random() * defenseDescs.length)];
+            const numEnemies = 1 + Math.floor(Math.random() * 4);
+            return {
+                id: gameState.nextId++,
+                desc: desc,
+                difficulty: difficulty,
+                minStrength, minWisdom, minDexterity, minLuck,
+                focusStat: 'dexterity',
+                minFocus: minDexterity,
+                type: 4,
+                daysLeft: 1,
+                reward: 0,
+                assigned: [],
+                inProgress: false,
+                defense: true,
+                numEnemies: numEnemies,
+                enemies: []
+            };
+        }
+        
+        function generateTrainingQuest() {
+            return {
+                id: gameState.nextId++,
+                desc: 'トレーニングクエスト',
+                difficulty: 1,
+                minStrength: 0,
+                minWisdom: 0,
+                minDexterity: 0,
+                minLuck: 0,
+                focusStat: 'strength', // ダミー値（使われない）
+                minFocus: 0,
+                type: 5, // training 用
+                training: true,
+                daysLeft: 99999, // 期限なし
+                reward: 0,
+                assigned: [],
+                inProgress: false
+            };
+        }
 
+        function ensureTrainingQuest() {
+            if (!gameState.quests.some(q => q.training)) {
+                const tq = generateTrainingQuest();
+                gameState.quests.unshift(tq); // 常に一番上に表示
+            }
+        }        
+        function generateSideQuest(npcIdx) {
+            const repFactor = Math.max(0, gameState.reputation);
+            const minDiff = 1;
+            const maxDiff = Math.min(100, Math.floor(repFactor / 3.5) + 1);
+            const normalDifficulty = minDiff + Math.floor(Math.random() * (maxDiff - minDiff + 1));
+            const difficulty = Math.min(110, normalDifficulty + Math.floor(Math.random() * 6) + 5); // 5-10 higher, slight increase
+            const primary = Math.floor(Math.random()*4);
+            let minStrength=0,minWisdom=0,minDexterity=0,minLuck=0;
+            // More focused: higher for primary, much lower for others
+            const focusMult = 1.5; // Higher for focus
+            const otherMult = 0.5; // Much lower for others
+            if(primary===0){
+                minStrength = Math.floor((Math.random()*10 + difficulty*5) * focusMult);
+                minWisdom = Math.floor((Math.random()*5 + difficulty*2) * otherMult);
+                minDexterity = Math.floor((Math.random()*5 + difficulty*2) * otherMult);
+                minLuck = Math.floor((Math.random()*3 + difficulty) * otherMult);
+            } else if(primary===1){
+                minWisdom = Math.floor((Math.random()*10 + difficulty*5) * focusMult);
+                minStrength = Math.floor((Math.random()*5 + difficulty*2) * otherMult);
+                minDexterity = Math.floor((Math.random()*5 + difficulty*2) * otherMult);
+                minLuck = Math.floor((Math.random()*3 + difficulty) * otherMult);
+            } else if(primary===2){
+                minDexterity = Math.floor((Math.random()*10 + difficulty*5) * focusMult);
+                minStrength = Math.floor((Math.random()*5 + difficulty*2) * otherMult);
+                minWisdom = Math.floor((Math.random()*5 + difficulty*2) * otherMult);
+                minLuck = Math.floor((Math.random()*3 + difficulty) * otherMult);
+            } else {
+                minLuck = Math.floor((Math.random()*10 + difficulty*5) * focusMult);
+                minStrength = Math.floor((Math.random()*3 + difficulty) * otherMult);
+                minWisdom = Math.floor((Math.random()*3 + difficulty) * otherMult);
+                minDexterity = Math.floor((Math.random()*5 + difficulty*2) * otherMult);
+            }
+            const descs = questTypeDescs[primary];
+            let desc;
+            let item = null;
+            if (primary === 3) {
+                const itemIdx = Math.floor(Math.random() * fetchDescs.length);
+                desc = fetchDescs[itemIdx];
+                item = {...fetchItems[itemIdx]};
+            } else {
+                desc = descs[Math.floor(Math.random() * descs.length)];
+            }
+            const focusStat = ['strength', 'wisdom', 'dexterity', 'luck'][primary];
+            const minFocus = primary === 0 ? minStrength : primary === 1 ? minWisdom : primary === 2 ? minDexterity : minLuck;
+            return {
+                id: gameState.nextId++,
+                desc: desc,
+                difficulty,
+                minStrength, minWisdom, minDexterity, minLuck,
+                focusStat: focusStat,
+                minFocus: minFocus,
+                type: primary,
+                item: item,
+                npcIdx: npcIdx,
+                daysLeft: 30 + Math.floor(Math.random() * 10), // ~30 days
+                reward: difficulty * 150,
+                assigned:[],
+                inProgress: false,
+                side: true
+            };
+        }
         function generateTempAdventurer(){
             const repFactor = Math.max(0.1, (gameState.reputation + 50) / 100);
             const primary = Math.floor(Math.random()*4);
@@ -415,26 +751,105 @@
                 primary: primary
             };
         }
-
+        function generateKillRecruit(difficulty) {
+            const primary = Math.floor(Math.random()*4);
+            const repFactor = Math.max(0.1, (gameState.reputation + difficulty * 20 + 50) / 100);
+            let s = Math.max(1, Math.floor((1 + Math.random() * 5) * repFactor)), w = Math.max(1, Math.floor((1 + Math.random() * 5) * repFactor)), d = Math.max(1, Math.floor((1 + Math.random() * 5) * repFactor)), l = Math.max(1, Math.floor((1 + Math.random() * 5) * repFactor));
+            if (primary === 0) s = Math.floor(20 * repFactor + Math.random() * (20 * repFactor)) + Math.floor(gameState.reputation / 20) + Math.floor(difficulty / 2);
+            else if (primary === 1) w = Math.floor(20 * repFactor + Math.random() * (20 * repFactor)) + Math.floor(gameState.reputation / 20) + Math.floor(difficulty / 2);
+            else if (primary === 2) d = Math.floor(20 * repFactor + Math.random() * (20 * repFactor)) + Math.floor(gameState.reputation / 20) + Math.floor(difficulty / 2);
+            else l = Math.floor(20 * repFactor + Math.random() * (20 * repFactor)) + Math.floor(gameState.reputation / 20) + Math.floor(difficulty / 2);
+            const gender = Math.random() < 0.5 ? 'M' : 'F';
+            const name = randomName(gender);
+            const statAbbr = ['STR','WIS','DEX','LUC'][primary];
+            const image = `${statAbbr}_${gender}.png`;
+            let adv = {
+                id: gameState.nextId++,
+                name: name,
+                level: 1, exp: 0,
+                strength: s, wisdom: w, dexterity: d, luck: l,
+                hp: 100, maxHp: 100, mp: 50, maxMp: 50,
+                equipment: [],
+                image: image,
+                busy: false,
+                primary: primary
+            };
+            const startLevel = Math.max(1, Math.floor(difficulty / 10));
+            for (let lv = 1; lv < startLevel; lv++) {
+                const r = Math.random();
+                let sb = 1, wb = 1, db = 1, lb = 1;
+                if (r < 0.4) wb += 4;
+                else if (r < 0.6) sb += 4;
+                else if (r < 0.8) db += 4;
+                else lb += 4;
+                adv.strength += sb;
+                adv.wisdom += wb;
+                adv.dexterity += db;
+                adv.luck += lb;
+                adv.maxHp += 20;
+                adv.maxMp += 10;
+            }
+            adv.level = startLevel;
+            adv.hp = adv.maxHp;
+            adv.mp = adv.maxMp;
+            adv.exp = 0;
+            return adv;
+        }
+        function generateEnemies(q) {
+            q.enemies = [];
+            for (let i = 0; i < q.numEnemies; i++) {
+                const config = enemyConfigs[Math.floor(Math.random() * enemyConfigs.length)];
+                const baseStat = Math.floor( (Math.floor(gameState.reputation) + 1) * 0.6 + Math.random() * 10 );
+                const e = {
+                    id: `enemy_${q.id}_${i}`,
+                    name: config.ja + ` ${i + 1}`,
+                    image: `${config.en}_enemy.png`,
+                    hp: Math.floor(60 + baseStat * 1.5 + Math.random() * 30),
+                    maxHp: 0,
+                    mp: Math.floor(20 + baseStat * 0.5 + Math.random() * 10),
+                    maxMp: 0,
+                    strength: Math.max(1, Math.floor(baseStat * 0.8 + Math.random() * 5)),
+                    wisdom: Math.max(1, Math.floor(baseStat * 0.8 + Math.random() * 5)),
+                    dexterity: Math.max(1, Math.floor(baseStat * 0.8 + Math.random() * 5)),
+                    luck: Math.max(1, Math.floor(baseStat * 0.5 + Math.random() * 3)),
+                    defending: false,
+                    action: null,
+                    target: null
+                };
+                e.maxHp = e.hp;
+                e.maxMp = e.mp;
+                q.enemies.push(e);
+            }
+        }
         function rollStat(adv, statName) {
+            if (!adv) return 0;
             const base = getEffectiveStat(adv, statName);
-            const variance = 0.25;  // 25% lower/higher
+            const variance = 0.25; // 25% lower/higher
             const minMod = base * (1 - variance);
             const maxMod = base * (1 + variance);
             const final = Math.max(Math.round(minMod + Math.random() * (maxMod - minMod)), 1);
             return final;
         }
-
-        function getEffectiveStat(adv, stat) {
-            const base = adv[stat];
-            const totalBonus = adv.equipment.reduce((sum, e) => e.stat === stat ? sum + e.bonus : sum, 0);
-            return Math.floor(base * (1 + totalBonus / 100));
+        function getEffectiveStat(obj, stat) {
+            if (!obj) return 0;
+            const base = obj[stat];
+            let totalBonus = 0;
+            if (obj.equipment) {
+                totalBonus = obj.equipment.reduce((sum, e) => e.stat === stat ? sum + e.bonus : sum, 0);
+            }
+            const mpPct = obj && typeof obj.mp === 'number' && typeof obj.maxMp === 'number' && obj.maxMp > 0 ? obj.mp / obj.maxMp : 1;
+            let mpBonus;
+            if (mpPct >= 0.5) {
+                mpBonus = 0.20 * (mpPct - 0.5) / 0.5;
+            } else {
+                mpBonus = -0.20 * (0.5 - mpPct) / 0.5;
+            }
+            const totalPctBonus = totalBonus + (mpBonus * 100);
+            return Math.max(1, Math.floor(base * (1 + totalPctBonus / 100)));
         }
-
         function calcSumStats(adv){
             return ['strength','wisdom','dexterity','luck'].reduce((sum, st) => sum + getEffectiveStat(adv, st), 0);
         }
-
         function levelUp(adv){
             while(adv.exp >= adv.level*100){
                 adv.exp -= adv.level*100;
@@ -450,22 +865,25 @@
                 adv.hp=adv.maxHp; adv.mp=adv.maxMp;
             }
         }
-
         function findAdv(id){return gameState.adventurers.find(a=>a.id===id);}
-
         function assign(questId, advId){
             const q=gameState.quests.find(q=>q.id===questId);
             if(!q) return;
-            if(q.assigned.length>=4){alert("Quest is full"); return;}
+            const maxSlots = q.training ? 2 : 4;
+            if(q.assigned.length >= maxSlots){
+                alert(q.training ? "トレーニングクエストは最大2人までです。" : "クエストは満員です");
+                return;
+            }
             const adv=findAdv(advId);
             if(!adv) return;
+            if(adv.mp <= 0){ alert(`${adv.name}のMPがありません！ポーションで回復するか、回復を待ってください。`); return; }
             const cost=adv.temp?adv.hiringCost:0;
             if(cost > 0 && !spendGold(cost)) return;
             q.assigned.push(advId);
             adv.busy=true;
             updateDisplays();
-        }
-
+        } 
+        
         function unassign(questId, advId){
             const q=gameState.quests.find(q=>q.id===questId);
             if(!q || q.inProgress) return; // Can't unassign if in progress
@@ -481,33 +899,39 @@
             }
             updateDisplays();
         }
-
         function rejectQuest(qId) {
             const q = gameState.quests.find(qq => qq.id === qId);
             if (!q) return;
-            if (q.assigned.length > 0 || q.inProgress) return;
+            if (q.assigned.length > 0 || q.inProgress || q.defense || q.training) return;
             const penalty = 0.1 * q.difficulty;
             gameState.reputation -= penalty;
-            gameState.eventHistory.unshift({day: gameState.day, message: `Rejected quest "${q.desc}". Reputation -${penalty.toFixed(1)}.`});
+            gameState.eventHistory.unshift({day: gameState.day, message: `クエスト "${q.desc}" を拒否。評判 -${penalty.toFixed(1)}。`});
             const idx = gameState.quests.findIndex(qq => qq.id === qId);
             if (idx !== -1) {
                 gameState.quests.splice(idx, 1);
             }
-            alert(`Quest rejected! Reputation -${penalty.toFixed(1)}`);
+            alert(`クエストを拒否しました！評判 -${penalty.toFixed(1)}`);
             updateDisplays();
         }
-
+        
         function buy(i){
             const it=shopItems[i];
             if(!spendGold(it.cost)) return;
             gameState.inventory.push({...it,id:gameState.nextId++});
             updateDisplays();
         }
-
+        function sellItem(i){
+            const item = gameState.sellables[i];
+            if(!item) return;
+            const price = Math.floor(item.minPrice + Math.random() * (item.maxPrice - item.minPrice + 1));
+            gameState.gold += price;
+            gameState.sellables.splice(i, 1);
+            updateDisplays();
+        }
         function recruit(i){
             const numPerms = gameState.adventurers.filter(a => !a.temp).length;
             if(numPerms >= gameState.maxPermanentSlots){
-                alert('Guild is full! Buy expansion to recruit more.');
+                alert('ギルドは満杯です！拡張を購入してさらに募集してください。');
                 return;
             }
             const adv=gameState.recruitPending[i];
@@ -521,19 +945,161 @@
             gameState.recruitPending.splice(i,1);
             updateDisplays();
         }
-
         function firePerm(pIdx){
             const perms=gameState.adventurers.filter(a=>!a.temp);
             const adv=perms[pIdx];
-            if(confirm(`Fire ${adv.name}? This cannot be undone.`)){
+            if (!adv) return;
+            if (adv.busy) {
+                alert("現在クエスト中の冒険者を解雇できません！");
+                return;
+            }
+            if(confirm(`${adv.name}を解雇しますか？取り消せません。`)){
+                // Unassign from any quest
+                gameState.quests.forEach(q => {
+                    const idx = q.assigned.indexOf(adv.id);
+                    if (idx > -1) {
+                        q.assigned.splice(idx, 1);
+                    }
+                });
                 const idx = gameState.adventurers.findIndex(a=>a.id===adv.id);
                 if(idx > -1){
                     gameState.adventurers.splice(idx,1);
                 }
+                currentCharIndex = Math.max(0, currentCharIndex - 1);
+                renderCurrentCharacter();
                 updateDisplays();
             }
         }
-
+        function equipToChar(pIdx, invIdx){
+            const perms = gameState.adventurers.filter(a => !a.temp);
+            const adv = perms[pIdx];
+            if(adv.equipment.length >= 2){ alert('最大2つまで'); return; }
+            const item = gameState.inventory[invIdx];
+            if(!item || !item.stat){ return; }
+            adv.equipment.push(item);
+            gameState.inventory.splice(invIdx,1);
+            renderCurrentCharacter();
+        }
+        function removeFromChar(pIdx, eqIdx){
+            const perms = gameState.adventurers.filter(a => !a.temp);
+            const adv = perms[pIdx];
+            const item = adv.equipment[eqIdx];
+            adv.equipment.splice(eqIdx,1);
+            gameState.inventory.push(item);
+            renderCurrentCharacter();
+        }
+        function usePotionOnChar(pIdx, restore){
+            const perms = gameState.adventurers.filter(a => !a.temp);
+            const adv = perms[pIdx];
+            const potionName = restore==='hp' ? 'HPポーション' : 'MPポーション';
+            const item = gameState.inventory.find(it=> it.name === potionName);
+            if(!item){ return; }
+            const amount = item.amount;
+            const field = restore;
+            const maxField = restore === 'hp' ? 'maxHp' : 'maxMp';
+            adv[field] = Math.min(adv[maxField], (adv[field]||0) + amount);
+            const invIdx = gameState.inventory.findIndex(it=>it.id===item.id);
+            gameState.inventory.splice(invIdx,1);
+            renderCurrentCharacter();
+        }
+        function prevChar(){
+            const perms = gameState.adventurers.filter(a=>!a.temp);
+            currentCharIndex = (currentCharIndex -1 + perms.length) % perms.length;
+            renderCurrentCharacter();
+        }
+        function nextChar(){
+            const perms = gameState.adventurers.filter(a=>!a.temp);
+            currentCharIndex = (currentCharIndex +1 ) % perms.length;
+            renderCurrentCharacter();
+        }
+        function renderCurrentCharacter(){
+            const perms = gameState.adventurers.filter(a=>!a.temp);
+            if(perms.length === 0){
+                document.getElementById('charactersContent').innerHTML = '<p>恒久的な冒険者なし。</p>';
+                return;
+            }
+            const adv = perms[currentCharIndex];
+            const baseStr = adv.strength;
+            const baseWis = adv.wisdom;
+            const baseDex = adv.dexterity;
+            const baseLuk = adv.luck;
+            const effStr = getEffectiveStat(adv, 'strength');
+            const effWis = getEffectiveStat(adv, 'wisdom');
+            const effDex = getEffectiveStat(adv, 'dexterity');
+            const effLuk = getEffectiveStat(adv, 'luck');
+            const equipStr = effStr - baseStr;
+            const equipWis = effWis - baseWis;
+            const equipDex = effDex - baseDex;
+            const equipLuk = effLuk - baseLuk;
+            const sum=calcSumStats(adv);
+            const stats=`Lv ${adv.level} | <img src="STR.png" class="stat-icon" title="筋力"> 筋力 ${effStr} (${baseStr}+${equipStr}) <img src="WIS.png" class="stat-icon" title="知恵"> 知恵 ${effWis} (${baseWis}+${equipWis}) <img src="DEX.png" class="stat-icon" title="敏捷"> 敏捷 ${effDex} (${baseDex}+${equipDex}) <img src="LUC.png" class="stat-icon" title="運"> 運 ${effLuk} (${baseLuk}+${equipLuk})`;
+            const expNeeded = adv.level * 100;
+            const expPct = Math.min(100, (adv.exp / expNeeded) * 100);
+            const hpPct = adv && typeof adv.hp === 'number' && typeof adv.maxHp === 'number' && adv.maxHp > 0 ? Math.max(0, Math.min(100, (adv.hp / adv.maxHp) * 100)) : 0;
+            const mpPct = adv && typeof adv.mp === 'number' && typeof adv.maxMp === 'number' && adv.maxMp > 0 ? Math.max(0, Math.min(100, (adv.mp / adv.maxMp) * 100)) : 0;
+            const hpDisplay = Number(adv.hp) || 0;
+            const maxHpDisplay = Number(adv.maxHp) || 0;
+            const mpDisplay = Number(adv.mp) || 0;
+            const maxMpDisplay = Number(adv.maxMp) || 0;
+            const img=`<img src="${adv.image}" class="adventurer-img" alt="${adv.name}">`;
+            const nameHtml = getNameHtml(adv);
+            let html = `<div class="char-nav">
+                <button onclick="prevChar()">← 前</button>
+                <span>${currentCharIndex+1} / ${perms.length}</span>
+                <button onclick="nextChar()">次 →</button>
+            </div>`;
+            html+=`<h3>${img}${nameHtml} <small class="stats">${stats}</small></h3>`;
+            html+=`<div class="progress-bar"><div class="progress-fill hp-fill" style="width:${hpPct}%"></div></div> HP ${hpDisplay}/${maxHpDisplay}<br>`;
+            html+=`<div class="progress-bar"><div class="progress-fill mp-fill" style="width:${mpPct}%"></div></div> MP ${mpDisplay}/${maxMpDisplay}<br>`;
+            html+=`<div class="progress-bar"><div class="progress-fill exp-fill" style="width:${expPct}%"></div></div> 経験値 ${adv.exp}/${expNeeded}<br>`;
+            html+=`<h4>装備 (最大2)</h4><ul>`;
+            adv.equipment.forEach((e,j)=>{
+                const icon = statIcons[e.stat] ? `<img src="${statIcons[e.stat]}.png" class="stat-icon" title="${statFull[e.stat]}">` : '';
+                html+=`<li>${e.name} ${icon} +${e.bonus}% <button onclick="removeFromChar(${currentCharIndex}, ${j})">解除</button></li>`;
+            });
+            html+=`</ul>`;
+            html+=`<h4>装備するアイテム</h4><ul>`;
+            gameState.inventory.forEach((it,i)=>{
+                if(it.stat && it.type !== 'potion'){
+                    const icon = statIcons[it.stat] ? `<img src="${statIcons[it.stat]}.png" class="stat-icon" title="${statFull[it.stat]}">` : '';
+                    if(adv.equipment.length < 2){
+                        html+=`<li>${it.name} ${icon} +${it.bonus}% <button onclick="equipToChar(${currentCharIndex}, ${i})">装備</button></li>`;
+                    } else {
+                        html+=`<li>${it.name} ${icon} +${it.bonus}% (満杯)</li>`;
+                    }
+                }
+            });
+            html+=`</ul>`;
+            html+=`<h4>ポーション</h4><ul>`;
+            const hpPotions = gameState.inventory.filter(it => it.name === 'HPポーション').length;
+            const mpPotions = gameState.inventory.filter(it => it.name === 'MPポーション').length;
+            if(hpPotions > 0){
+                html += `<li>HPポーション x${hpPotions} <button onclick="usePotionOnChar(${currentCharIndex}, 'hp')">使用</button></li>`;
+            }
+            if(mpPotions > 0){
+                html += `<li>MPポーション x${mpPotions} <button onclick="usePotionOnChar(${currentCharIndex}, 'mp')">使用</button></li>`;
+            }
+            if(hpPotions === 0 && mpPotions === 0){
+                html += `<li>なし</li>`;
+            }
+            html += `</ul>`;
+            html+=`<button onclick="firePerm(${currentCharIndex})">解雇</button>`;
+            document.getElementById('charactersContent').innerHTML = html;
+        }
+        function receiveSideQuests(npcIdx) {
+            if (gameState.receivedNPCs.includes(npcIdx)) {
+                alert('このNPCからサイドクエストを既に受け取りました！');
+                return;
+            }
+            gameState.receivedNPCs.push(npcIdx);
+            for (let j = 0; j < 2; j++) {
+                const sq = generateSideQuest(npcIdx);
+                gameState.quests.push(sq);
+            }
+            alert('利用可能なクエストに2つのサイドクエストが追加されました！');
+            document.getElementById('npcsContent').innerHTML = getNPCsContent();
+            updateDisplays();
+        }
         function toggleShop(){
             const modal = document.getElementById('shopModal');
             modal.style.display = modal.style.display==='none'?'flex':'none';
@@ -541,83 +1107,61 @@
                 document.getElementById('shopContent').innerHTML = getShopContent();
             }
         }
-
         function closeShop(){
             document.getElementById('shopModal').style.display='none';
         }
-
         function toggleCharacters(){
             const modal = document.getElementById('charactersModal');
             modal.style.display = modal.style.display==='none'?'flex':'none';
             if(modal.style.display==='flex'){
-                document.getElementById('charactersContent').innerHTML = getCharactersContent();
+                currentCharIndex = 0;
+                renderCurrentCharacter();
             }
         }
-
         function closeCharacters(){
             document.getElementById('charactersModal').style.display='none';
+            updateDisplays();
         }
-
+        function toggleNPCs() {
+            const modal = document.getElementById('npcsModal');
+            modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
+            if (modal.style.display === 'flex') {
+                document.getElementById('npcsContent').innerHTML = getNPCsContent();
+            }
+        }
+        function closeNPCs() {
+            document.getElementById('npcsModal').style.display = 'none';
+        }
+        function getNPCsContent() {
+            let html = '<ul>';
+            gameState.discoveredNPCs.forEach(idx => {
+                const name = discoveryNPCs[idx];
+                const received = gameState.receivedNPCs.includes(idx);
+                html += `<li><h3>${name}</h3>`;
+                if (!received) {
+                    html += `<button onclick="receiveSideQuests(${idx})">2つのサイドクエストを受け取る</button>`;
+                } else {
+                    html += `<p>サイドクエストを受け取りました。</p>`;
+                }
+                html += '</li>';
+            });
+            html += '</ul>';
+            if (!gameState.discoveredNPCs.length) html = '<p>発見されたNPCなし。</p>';
+            return html;
+        }
         function getNameHtml(adv) {
             const color = statColors[adv.primary] || '#000000';
             return `<span style="color: ${color}"><strong>${adv.name}</strong></span>`;
         }
-
-        function getCharactersContent(){
-            const perms=gameState.adventurers.filter(a=>!a.temp);
-            let html='';
-            for(let p=0;p<perms.length;p++){
-                const adv=perms[p];
-                const baseStr = adv.strength;
-                const baseWis = adv.wisdom;
-                const baseDex = adv.dexterity;
-                const baseLuk = adv.luck;
-                const effStr = getEffectiveStat(adv, 'strength');
-                const effWis = getEffectiveStat(adv, 'wisdom');
-                const effDex = getEffectiveStat(adv, 'dexterity');
-                const effLuk = getEffectiveStat(adv, 'luck');
-                const equipStr = effStr - baseStr;
-                const equipWis = effWis - baseWis;
-                const equipDex = effDex - baseDex;
-                const equipLuk = effLuk - baseLuk;
-                const sum=calcSumStats(adv);
-                const stats=`Lv ${adv.level} | <img src="STR.png" class="stat-icon" title="STR"> ${effStr} (${baseStr}+${equipStr}) <img src="WIS.png" class="stat-icon" title="WIS"> ${effWis} (${baseWis}+${equipWis}) <img src="DEX.png" class="stat-icon" title="DEX"> ${effDex} (${baseDex}+${equipDex}) <img src="LUC.png" class="stat-icon" title="LUC"> ${effLuk} (${baseLuk}+${equipLuk})`;
-                const expNeeded = adv.level * 100;
-                const expPct = Math.min(100, (adv.exp / expNeeded) * 100);
-                const img=`<img src="${adv.image}" class="adventurer-img" alt="${adv.name}">`;
-                const nameHtml = getNameHtml(adv);
-                html+=`<div><h3>${img}${nameHtml} <small class="stats">${stats}</small></h3>`;
-                html+=`<div class="progress-bar"><div class="progress-fill exp-fill" style="width:${expPct}%"></div></div> EXP ${adv.exp}/${expNeeded}<br><ul>`;
-                adv.equipment.forEach(e=>{
-                    const icon = statIcons[e.stat] ? `<img src="${statIcons[e.stat]}.png" class="stat-icon" title="${statIcons[e.stat]}">` : '';
-                    html+=`<li>${e.name} ${icon} +${e.bonus}%</li>`;
-                });
-                html+=`</ul><h4>Inventory to</h4><ul>`;
-                gameState.inventory.forEach((it,i)=>{
-                    const icon = statIcons[it.stat] ? `<img src="${statIcons[it.stat]}.png" class="stat-icon" title="${statIcons[it.stat]}">` : '';
-                    html+=`<li>${it.name} ${icon} +${it.bonus}% <button onclick="assignToPerm(${p},${i})">Assign</button></li>`;
-                });
-                html+=`</ul><button onclick="firePerm(${p})">Fire</button></div>`;
-            }
-            if(!perms.length) html='<p>No permanent adventurers.</p>';
-            return html;
-        }
-
-        function assignToPerm(pIdx,invIdx){
-            const perms=gameState.adventurers.filter(a=>!a.temp);
-            const adv=perms[pIdx];
-            const item=gameState.inventory[invIdx];
-            if(!adv||!item) return;
-            adv.equipment.push(item);
-            gameState.inventory.splice(invIdx,1);
-            updateDisplays();
-        }
-
         function getShopContent(){
             let html='<ul>';
             shopItems.forEach((it,i)=>{
-                const icon = statIcons[it.stat] ? `<img src="${statIcons[it.stat]}.png" class="stat-icon" title="${statIcons[it.stat]}">` : '';
-                html+=`<li>${it.name} - ${it.cost}g ${icon} +${it.bonus}% <button onclick="buy(${i})">Buy</button></li>`;
+                if (it.type === 'potion') {
+                    html += `<li>${it.name} - ${it.cost}g (${it.amount} ${it.restore.toUpperCase()} を回復) <button onclick="buy(${i})">購入</button></li>`;
+                } else {
+                    const icon = statIcons[it.stat] ? `<img src="${statIcons[it.stat]}.png" class="stat-icon" title="${statFull[it.stat]}">` : '';
+                    html+=`<li>${it.name} ${icon} +${it.bonus}% - ${it.cost}g <button onclick="buy(${i})">購入</button></li>`;
+                }
             });
             html+='</ul>';
             const currentSlots = gameState.maxPermanentSlots;
@@ -625,17 +1169,22 @@
                 const nextSlots = currentSlots + 1;
                 const level = nextSlots - 4;
                 const cost = 500 + 250 * (level - 1);
-                html += `<h3>Guild Expansion</h3><ul><li>Current max permanent available: ${currentSlots} | Upgrade to ${nextSlots} slots - ${cost}g <button onclick="buyExpansion()">Buy</button></li></ul>`;
+                html += `<h3>ギルド拡張</h3><ul><li>現在の恒久冒険者最大数: ${currentSlots} | ${nextSlots} スロットにアップグレード - ${cost}g <button onclick="buyExpansion()">購入</button></li></ul>`;
             }
-            html += `<h3>Corruption</h3><ul><li>Spend 10 Rep for 100g <button onclick="corrupt()">Corrupt</button></li></ul>`;
+            html += `<h3>腐敗</h3><ul><li>10 評判で 100g を得る <button onclick="corrupt()">腐敗</button></li></ul>`;
+            html += `<h3>アイテムを売る</h3><ul>`;
+            gameState.sellables.forEach((item, i) => {
+                const price = Math.floor(item.minPrice + Math.random() * (item.maxPrice - item.minPrice + 1));
+                html += `<li>${item.name} - ${price}g で売却 <button onclick="sellItem(${i})">売却</button></li>`;
+            });
+            html += '</ul>';
             return html;
         }
-
         function getRecruitsHtml(){
             const numPerms = gameState.adventurers.filter(a => !a.temp).length;
             const full = numPerms >= gameState.maxPermanentSlots;
-            if(!gameState.recruitPending.length) return '<h2>Recruit Pending</h2><p>None</p>';
-            let html='<h2>Recruit Pending</h2>';
+            if(!gameState.recruitPending.length) return '<h2>募集保留</h2><p>なし</p>';
+            let html='<h2>募集保留</h2>';
             gameState.recruitPending.forEach((adv,i)=>{
                 const baseStr = adv.strength;
                 const baseWis = adv.wisdom;
@@ -650,24 +1199,23 @@
                 const equipDex = effDex - baseDex;
                 const equipLuk = effLuk - baseLuk;
                 const sum=calcSumStats(adv);
-                const stats=`Lv ${adv.level} | <img src="STR.png" class="stat-icon" title="STR"> ${effStr} (${baseStr}+${equipStr}) <img src="WIS.png" class="stat-icon" title="WIS"> ${effWis} (${baseWis}+${equipWis}) <img src="DEX.png" class="stat-icon" title="DEX"> ${effDex} (${baseDex}+${equipDex}) <img src="LUC.png" class="stat-icon" title="LUC"> ${effLuk} (${baseLuk}+${equipLuk})`;
+                const stats=`Lv ${adv.level} | <img src="STR.png" class="stat-icon" title="筋力"> 筋力 ${effStr} (${baseStr}+${equipStr}) <img src="WIS.png" class="stat-icon" title="知恵"> 知恵 ${effWis} (${baseWis}+${equipWis}) <img src="DEX.png" class="stat-icon" title="敏捷"> 敏捷 ${effDex} (${baseDex}+${equipDex}) <img src="LUC.png" class="stat-icon" title="運"> 運 ${effLuk} (${baseLuk}+${equipLuk})`;
                 const expNeeded = adv.level * 100;
                 const expPct = Math.min(100, (adv.exp / expNeeded) * 100);
                 const img=`<img src="${adv.image}" class="adventurer-img" alt="${adv.name}">`;
                 const nameHtml = getNameHtml(adv);
-                const btnHtml = full ? '<button disabled>Guild Full</button>' : `<button onclick="recruit(${i})">Recruit</button>`;
+                const btnHtml = full ? '<button disabled>ギルド満杯</button>' : `<button onclick="recruit(${i})">募集する</button>`;
                 html+=`<div class="adventurer-card" draggable="true" data-adv-id="${adv.id}">
                     ${img}${nameHtml}<br><small class="stats">${stats}</small><br>
-                    <div class="progress-bar"><div class="progress-fill exp-fill" style="width:${expPct}%"></div></div> EXP ${adv.exp}/${expNeeded}<br>
-                    Cost: ${adv.recruitingCost}g ${btnHtml}
+                    <div class="progress-bar"><div class="progress-fill exp-fill" style="width:${expPct}%"></div></div> 経験値 ${adv.exp}/${expNeeded}<br>
+                    コスト: ${adv.recruitingCost}g ${btnHtml}
                 </div>`;
             });
             return html;
         }
-
         function getAvailableHtml(){
             const avail=gameState.adventurers.filter(a=>!a.busy);
-            let html='<h2>Available Adventurers</h2>';
+            let html='<h2>利用可能冒険者</h2>';
             avail.forEach(adv=>{
                 const baseStr = adv.strength;
                 const baseWis = adv.wisdom;
@@ -682,29 +1230,32 @@
                 const equipDex = effDex - baseDex;
                 const equipLuk = effLuk - baseLuk;
                 const sum=calcSumStats(adv);
-                const stats=`Lv ${adv.level} | <img src="STR.png" class="stat-icon" title="STR"> ${effStr} (${baseStr}+${equipStr}) <img src="WIS.png" class="stat-icon" title="WIS"> ${effWis} (${baseWis}+${equipWis}) <img src="DEX.png" class="stat-icon" title="DEX"> ${effDex} (${baseDex}+${equipDex}) <img src="LUC.png" class="stat-icon" title="LUC"> ${effLuk} (${baseLuk}+${equipLuk})`;
+                const stats=`Lv ${adv.level} | <img src="STR.png" class="stat-icon" title="筋力"> 筋力 ${effStr} (${baseStr}+${equipStr}) <img src="WIS.png" class="stat-icon" title="知恵"> 知恵 ${effWis} (${baseWis}+${equipWis}) <img src="DEX.png" class="stat-icon" title="敏捷"> 敏捷 ${effDex} (${baseDex}+${equipDex}) <img src="LUC.png" class="stat-icon" title="運"> 運 ${effLuk} (${baseLuk}+${equipLuk})`;
                 const expNeeded = adv.level * 100;
                 const expPct = Math.min(100, (adv.exp / expNeeded) * 100);
-                const hpPct = Math.max(0, Math.min(100, (adv.hp / adv.maxHp) * 100));
-                const mpPct = Math.max(0, Math.min(100, (adv.mp / adv.maxMp) * 100));
+                const hpPct = adv && typeof adv.hp === 'number' && typeof adv.maxHp === 'number' && adv.maxHp > 0 ? Math.max(0, Math.min(100, (adv.hp / adv.maxHp) * 100)) : 0;
+                const mpPct = adv && typeof adv.mp === 'number' && typeof adv.maxMp === 'number' && adv.maxMp > 0 ? Math.max(0, Math.min(100, (adv.mp / adv.maxMp) * 100)) : 0;
+                const hpDisplay = Number(adv.hp) || 0;
+                const maxHpDisplay = Number(adv.maxHp) || 0;
+                const mpDisplay = Number(adv.mp) || 0;
+                const maxMpDisplay = Number(adv.maxMp) || 0;
                 const img=`<img src="${adv.image}" class="adventurer-img" alt="${adv.name}">`;
                 const nameHtml = getNameHtml(adv);
-                const cost=adv.temp?`Hiring: ${adv.hiringCost}g`:'Permanent';
+                const cost=adv.temp?`雇用: ${adv.hiringCost}g`:'恒久的';
                 html+=`<div class="adventurer-card" draggable="true" data-adv-id="${adv.id}">
                     ${img}${nameHtml}<br>
                     <small class="stats">${stats}</small><br>
-                    <div class="progress-bar"><div class="progress-fill exp-fill" style="width:${expPct}%"></div></div> EXP ${adv.exp}/${expNeeded}<br>
-                    <div class="progress-bar"><div class="progress-fill hp-fill" style="width:${hpPct}%"></div></div> HP ${adv.hp}/${adv.maxHp}<br>
-                    <div class="progress-bar"><div class="progress-fill mp-fill" style="width:${mpPct}%"></div></div> MP ${adv.mp}/${adv.maxMp}<br>
+                    <div class="progress-bar"><div class="progress-fill exp-fill" style="width:${expPct}%"></div></div> 経験値 ${adv.exp}/${expNeeded}<br>
+                    <div class="progress-bar"><div class="progress-fill hp-fill" style="width:${hpPct}%"></div></div> HP ${hpDisplay}/${maxHpDisplay}<br>
+                    <div class="progress-bar"><div class="progress-fill mp-fill" style="width:${mpPct}%"></div></div> MP ${mpDisplay}/${maxMpDisplay}<br>
                     ${cost}
                 </div>`;
             });
-            if(!avail.length) html+='<p>No adventurers available today.</p>';
+            if(!avail.length) html+='<p>今日利用可能な冒険者なし。</p>';
             return html;
         }
-
         function calcDailyChance(q, assigned) {
-            if (assigned.length === 0) return 0;
+            if (assigned.length === 0 || q.defense) return 0;
             const teamFocus = assigned.reduce((s, id) => {
                 const adv = findAdv(id);
                 return adv ? s + getEffectiveStat(adv, q.focusStat) : s;
@@ -714,30 +1265,44 @@
             const prob = Math.min(0.5, 0.1 + Math.max(0, excess) * 0.2);
             return Math.round(prob * 100);
         }
-
         function getQuestsHtml(){
-            let html='<h2>Available Quests</h2>';
+            let html='<h2>利用可能クエスト</h2>';
             gameState.quests.forEach(q=>{
-                const typeClass = questTypeClasses[q.type];
+                let typeClass = questTypeClasses[q.type] || '';
+                if (q.side) typeClass += ' side';
+                if (q.training) typeClass = 'training';
+
                 const teamStr=q.assigned.reduce((s,id)=>s + getEffectiveStat(findAdv(id), 'strength'), 0);
                 const teamWis=q.assigned.reduce((s,id)=>s + getEffectiveStat(findAdv(id), 'wisdom'), 0);
                 const teamDex=q.assigned.reduce((s,id)=>s + getEffectiveStat(findAdv(id), 'dexterity'), 0);
                 const teamLuk=q.assigned.reduce((s,id)=>s + getEffectiveStat(findAdv(id), 'luck'), 0);
                 let estDays = 'N/A';
                 let chance = 0;
-                const meetsAll = teamStr >= q.minStrength && teamWis >= q.minWisdom && teamDex >= q.minDexterity && teamLuk >= q.minLuck;
+
+                const maxSlots = q.training ? 2 : 4;
+
                 if (q.assigned.length > 0) {
-                    if (!meetsAll) {
-                        estDays = 'Fail';
-                        chance = 0;
+                    if (q.training) {
+                        estDays = '1日';
+                        chance = 100;
+                    } else if (q.defense) {
+                        estDays = 'Today: Battle';
+                        chance = 'Tactical Combat';
                     } else {
-                        const teamFocus = q.assigned.reduce((s, id) => s + getEffectiveStat(findAdv(id), q.focusStat), 0);
-                        const excess = (teamFocus / q.minFocus) - 1;
-                        const prob = Math.min(0.5, 0.1 + Math.max(0, excess) * 0.2);
-                        chance = Math.round(prob * 100);
-                        estDays = Math.max(1, Math.ceil(1 / prob));
+                        const meetsAll = teamStr >= q.minStrength && teamWis >= q.minWisdom && teamDex >= q.minDexterity && teamLuk >= q.minLuck;
+                        if (!meetsAll) {
+                            estDays = '失敗';
+                            chance = 0;
+                        } else {
+                            const teamFocus = q.assigned.reduce((s, id) => s + getEffectiveStat(findAdv(id), q.focusStat), 0);
+                            const excess = (teamFocus / q.minFocus) - 1;
+                            const prob = Math.min(0.5, 0.1 + Math.max(0, excess) * 0.2);
+                            chance = Math.round(prob * 100);
+                            estDays = Math.max(1, Math.ceil(1 / prob));
+                        }
                     }
                 }
+
                 let assignedHtml = '';
                 q.assigned.forEach(id=>{
                     const a=findAdv(id);
@@ -751,44 +1316,60 @@
                         }
                     }
                 });
-                const minHtml = `<img src="STR.png" class="stat-icon" title="STR"> ${q.minStrength} | <img src="WIS.png" class="stat-icon" title="WIS"> ${q.minWisdom} | <img src="DEX.png" class="stat-icon" title="DEX"> ${q.minDexterity} | <img src="LUC.png" class="stat-icon" title="LUC"> ${q.minLuck}`;
-                const teamHtml = `<img src="STR.png" class="stat-icon" title="STR"> ${teamStr} | <img src="WIS.png" class="stat-icon" title="WIS"> ${teamWis} | <img src="DEX.png" class="stat-icon" title="DEX"> ${teamDex} | <img src="LUC.png" class="stat-icon" title="LUC"> ${teamLuk}`;
+
+                const minHtml = `<img src="STR.png" class="stat-icon" title="筋力"> 筋力 ${q.minStrength} | <img src="WIS.png" class="stat-icon" title="知恵"> 知恵 ${q.minWisdom} | <img src="DEX.png" class="stat-icon" title="敏捷"> 敏捷 ${q.minDexterity} | <img src="LUC.png" class="stat-icon" title="運"> 運 ${q.minLuck}`;
+                const teamHtml = `<img src="STR.png" class="stat-icon" title="筋力"> 筋力 ${teamStr} | <img src="WIS.png" class="stat-icon" title="知恵"> 知恵 ${teamWis} | <img src="DEX.png" class="stat-icon" title="敏捷"> 敏捷 ${teamDex} | <img src="LUC.png" class="stat-icon" title="運"> 運 ${teamLuk}`;
+
                 html+=`<div class="quest-card ${typeClass}" data-quest-id="${q.id}"
                          ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
-                    <h3>${q.desc}</h3>
-                    <p>Difficulty: ${q.difficulty} | Days Left: ${q.daysLeft} | Reward: ${q.reward}g</p>
-                    <p>Min: ${minHtml}</p>
-                    <p>Est. Days: ${estDays}</p>
-                    <p>Team: ${teamHtml} | Daily Chance: ${chance}%</p>
-                    <div>Assigned (${q.assigned.length}/4): ${assignedHtml}</div>`;
-                if(q.assigned.length === 0 && !q.inProgress){
+                    <h3>${q.desc}</h3>`;
+
+                if (q.training) {
+                    html += `<p><strong>常時利用可能なトレーニングクエスト（最大2人）</strong></p>`;
+                    html += `<p>低いレベルの冒険者はペアの高いレベル相当のEXPを獲得。リスクなし、報酬なし。</p>`;
+                    html += `<p>難易度: ${q.difficulty}（固定） | 必要ステータス: 全て0</p>`;
+                } else {
+                    html += `<p>難易度: ${q.difficulty} | 残り日数: ${q.daysLeft} | 報酬: ${q.reward}g</p>`;
+                    if (q.defense) {
+                        html += `<p><strong style="color:red;">防衛クエスト - 1-4人の防衛者を割り当てなければゲームオーバー！</strong></p>`;
+                    }
+                    if (!q.defense) {
+                        html += `<p>必要: ${minHtml}</p>`;
+                    }
+                }
+
+                html += `<p>予想日数: ${estDays}</p>
+                    <p>チーム: ${teamHtml} | 成功確率: ${chance}%</p>
+                    <div>割り当て済み (${q.assigned.length}/${maxSlots}): ${assignedHtml}</div>`;
+
+                if(q.assigned.length === 0 && !q.inProgress && !q.defense && !q.training){
                     const rejectPenalty = (0.1 * q.difficulty).toFixed(1);
-                    html += `<p><button onclick="rejectQuest(${q.id})" style="background:#e74c3c; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Reject Quest (-${rejectPenalty} Rep)</button></p>`;
+                    html += `<p><button onclick="rejectQuest(${q.id})" style="background:#e74c3c; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">クエスト拒否 (評判 -${rejectPenalty})</button></p>`;
                 }
                 if(q.inProgress){
-                    html += `<p class="in-progress">In Progress - Cannot unassign adventurers</p>`;
+                    html += `<p class="in-progress">進行中 - 冒険者の割り当て解除不可</p>`;
                 }
                 html += `</div>`;
             });
             return html;
-        }
-
+        }      
         function updateDay(){
             const current_week = Math.floor((gameState.day - 1) / 7);
             const next_tax_day = (current_week + 1) * 7;
             const daysUntilTax = next_tax_day - gameState.day;
-            const nextTaxAmount = 2 * Math.pow(2, (next_tax_day / 7) - 1);
-            let taxDisplay = `Tax in ${daysUntilTax} days: ${nextTaxAmount}g`;
-            if(daysUntilTax === 0){
-                taxDisplay = `Tax today: ${nextTaxAmount}g`;
+            const estimatedTax = Math.floor(gameState.gold * 0.2);
+            let taxDisplay;
+            if (daysUntilTax === 0) {
+                taxDisplay = `今日の税金: ${estimatedTax}g (20%)`;
+            } else {
+                taxDisplay = `${daysUntilTax}日後の税金: 約${estimatedTax}g (20%)`;
             }
             let status = '';
             if (gameState.gameOver) {
-                status = ' | <span style="color:red; font-weight:bold;">GAME OVER</span>';
+                status = ' | <span style="color:red; font-weight:bold;">ゲームオーバー</span>';
             }
-            document.getElementById('day').innerHTML=`<h2>Day ${gameState.day} | Gold: ${gameState.gold} | Rep: ${Math.max(0, gameState.reputation.toFixed(0))} | ${taxDisplay}${status}</h2>`;
+            document.getElementById('day').innerHTML=`<h2>日 ${gameState.day} | ゴールド: ${gameState.gold} | 評判: ${Math.max(0, gameState.reputation.toFixed(0))} | ${taxDisplay}${status}</h2>`;
         }
-
         function updateDisplays(){
             updateDay();
             document.getElementById('recruits').innerHTML=getRecruitsHtml();
@@ -798,25 +1379,25 @@
             if(shopModal.style.display === 'flex'){
                 document.getElementById('shopContent').innerHTML = getShopContent();
             }
-            const charactersModal = document.getElementById('charactersModal');
-            if(charactersModal.style.display === 'flex'){
-                document.getElementById('charactersContent').innerHTML = getCharactersContent();
+            const npcsModal = document.getElementById('npcsModal');
+            if (npcsModal.style.display === 'flex') {
+                document.getElementById('npcsContent').innerHTML = getNPCsContent();
             }
         }
-
         function startDay(){
             if (gameState.gameOver) {
                 updateDisplays();
                 return;
             }
-            // Filter out expired recruit pending (stay for 3 days: generatedDay in [day-2, day])
-            gameState.recruitPending = gameState.recruitPending.filter(adv => adv.generatedDay >= gameState.day - 2 && adv.generatedDay <= gameState.day);
-            // Filter out expired temp adventurers
-            gameState.adventurers = gameState.adventurers.filter(a=>!(a.temp && !a.busy && a.generatedDay < gameState.day));
-            gameState.adventurers.forEach(a=>{if(!a.temp && !a.busy){a.hp=Math.min(a.maxHp,a.hp+Math.floor(a.maxHp*0.1)); a.mp=Math.min(a.maxMp,a.mp+Math.floor(a.maxMp*0.1));}});
+            cleanupAdventurers();
+            gameState.adventurers.forEach(a=>{if(!a.temp && !a.busy){a.hp=Math.min(a.maxHp, (a.hp || 0) + Math.floor(a.maxHp*0.1)); a.mp=Math.min(a.maxMp, (a.mp || 0) + Math.floor(a.maxMp*0.1));}});
             let nq=Math.floor(Math.random()*3)+1;
             for(let i=0;i<nq && gameState.quests.length<3;i++){
                 let q=generateQuest(); gameState.quests.push(q);
+            }
+            if (gameState.day > 7 && Math.random() < 0.1 && !gameState.quests.some(q => q.defense)) {
+                const dq = generateDefenseQuest();
+                gameState.quests.push(dq);
             }
             let nt;
             if (gameState.reputation < 0) {
@@ -830,10 +1411,42 @@
                 let a=generateTempAdventurer(); a.generatedDay=gameState.day; gameState.adventurers.push(a);
             }
             updateDisplays();
+            ensureTrainingQuest();
         }
-
         // CRITICAL FIX: Use only 'let' and never reassign 'adv' reference
-        function processQuestOutcome(q, eventDay, success, lowStatusFail) {
+        function processQuestOutcome(q, eventDay, success, lowStatusFail, goldOverride = null) {
+            if (q.training) {
+                if (q.assigned.length === 0) return;
+
+                let assignedAdvs = q.assigned.map(id => findAdv(id)).filter(a => a);
+                if (assignedAdvs.length === 0) { q.assigned = []; return; }
+
+                let levels = assignedAdvs.map(a => a.level || 1);
+                let maxLv = Math.max(...levels);
+
+                let names = assignedAdvs.map(a => a.name);
+                let expDetails = [];
+
+                assignedAdvs.forEach(adv => {
+                    let expGain = q.difficulty * 20; // 基本20EXP
+                    if (assignedAdvs.length > 1 && adv.level < maxLv) {
+                        expGain = maxLv * 20; // 低い方が高い方相当のEXP
+                    }
+                    adv.exp += expGain;
+                    levelUp(adv);
+                    expDetails.push(`${adv.name} が ${expGain} EXP を獲得！`);
+                    adv.busy = false;
+                });
+
+                q.assigned = []; // リセットして再利用可能に
+
+                let msg = `トレーニングクエスト完了！<br>参加: ${names.join(' と ')}<br>${expDetails.join('<br>')}`;
+                if (expDetails.some(line => line.includes((maxLv * 20).toString()))) {
+                    msg += `<br>低いレベルの冒険者が高いレベルの指導で大きく成長した！`;
+                }
+                gameState.eventHistory.unshift({day: eventDay, message: msg});
+                return;
+            }            
             // Compute rolled stats first for success and death chances
             let teamRolled = {strength: 0, wisdom: 0, dexterity: 0, luck: 0};
             let adventurerRolls = {};
@@ -852,27 +1465,22 @@
                 teamRolled.dexterity += rolls.dexterity;
                 teamRolled.luck += rolls.luck;
             });
-
             // Log final results and mins
-            const statDetails = `Str: ${teamRolled.strength} (min ${q.minStrength}), Wis: ${teamRolled.wisdom} (min ${q.minWisdom}), Dex: ${teamRolled.dexterity} (min ${q.minDexterity}), Luck: ${teamRolled.luck} (min ${q.minLuck})`;
-
+            const statDetails = `筋: ${teamRolled.strength} (min ${q.minStrength}), 知: ${teamRolled.wisdom} (min ${q.minWisdom}), 敏: ${teamRolled.dexterity} (min ${q.minDexterity}), 運: ${teamRolled.luck} (min ${q.minLuck})`;
             const adventurerNames = [];
             const permanentNames = [];
             let permanentCount = 0;
             const difficulty = q.difficulty;
             const damageMultiplier = success ? 1 : (lowStatusFail ? 1.5 : 2);
-
             // Use traditional for loop to safely modify array during iteration
             for (let i = 0; i < q.assigned.length; i++) {
                 const adventurerId = q.assigned[i];
                 const adventurer = findAdv(adventurerId);
-
                 if (!adventurer) {
                     q.assigned.splice(i, 1);
                     i--;
                     continue;
                 }
-
                 // Success: gain EXP and level up
                 if (success) {
                     adventurer.exp += difficulty * 20;
@@ -882,24 +1490,21 @@
                         // No message for level up
                     }
                 }
-
                 // Apply damage, scaled by difference in level vs difficulty
                 const levelDiff = Math.max(0, q.difficulty - adventurer.level);
                 const extraDamageFactor = 1 + levelDiff * 0.1;
                 const hpDamage = difficulty * 5 * damageMultiplier * extraDamageFactor;
                 const mpDamage = difficulty * 3 * damageMultiplier * extraDamageFactor;
-                adventurer.hp = Math.max(0, adventurer.hp - hpDamage);
-                adventurer.mp = Math.max(0, adventurer.mp - mpDamage);
-
+                adventurer.hp = Math.max(0, (adventurer.hp || 0) - hpDamage);
+                adventurer.mp = Math.max(0, (adventurer.mp || 0) - mpDamage);
                 adventurer.busy = false;
-
                 // Perish if HP reached 0
                 if (adventurer.hp <= 0) {
                     const isPerm = !adventurer.temp;
                     if (isPerm) {
                         gameState.reputation = Math.max(-100, gameState.reputation - 10);
                     }
-                    let deathMsg = `${adventurer.name} ${isPerm ? 'perished' : 'was lost'} on "${q.desc}"!${isPerm ? ' Reputation -10.' : ''}`;
+                    let deathMsg = `${adventurer.name} が "${q.desc}" で${isPerm ? '死亡しました' : '失われました'}！${isPerm ? ' 評判 -10。' : ''}`;
                     gameState.eventHistory.unshift({day: eventDay, message: deathMsg});
                     // Remove from main adventurers
                     const mainIdx = gameState.adventurers.findIndex(a => a.id === adventurerId);
@@ -912,14 +1517,12 @@
                     i--;
                     continue;
                 }
-
                 // Collect surviving adventurers
                 adventurerNames.push(adventurer.name);
                 if (!adventurer.temp) {
                     permanentCount++;
                     permanentNames.push(adventurer.name);
                 }
-
                 // Only temp adventurers who survived can be recruited
                 if (adventurer.temp && success) {
                     const recruitCopy = JSON.parse(JSON.stringify(adventurer));
@@ -932,33 +1535,96 @@
                     // No message for recruitable
                 }
             }
-
             // Final reward and reputation
+            let extraMsg = '';
             if (success) {
-                const payout = permanentCount * 0.1 * q.reward;
-                gameState.gold += q.reward - payout;
-                const repGain = q.difficulty * 0.5;
+                let payout = permanentCount * 0.1 * q.reward;
+                let rewardGold = q.reward;
+                if (goldOverride !== null) {
+                    rewardGold = goldOverride;
+                    payout = permanentCount * 0.1 * goldOverride;
+                }
+                gameState.gold += rewardGold - payout;
+                let repGain = q.difficulty * 0.5;
                 gameState.reputation += repGain;
-                gameState.eventHistory.unshift({day: eventDay, message: `Quest completed by ${adventurerNames.join(', ')}! Stats: ${statDetails} Guild +${q.reward - payout}g (paid ${payout}g to permanents). Reputation +${repGain}.`});
+                if (q.type === 2) {
+                    const repChance = Math.min(0.8, 0.15 + q.difficulty * 0.0065);
+                    if (Math.random() < repChance) {
+                        const extraRep = q.difficulty * 0.6;
+                        gameState.reputation += extraRep;
+                        extraMsg += ` 感謝のクライアントが言葉を広め、+${extraRep.toFixed(1)} 評判！`;
+                    }
+                }
+                if (q.type === 1) {
+                    const discChance = Math.max(0.01, 0.02 + q.difficulty * 0.004) * gameState.discoveryMultiplier;
+                    if (Math.random() < discChance && q.npcIdx !== null && !gameState.discoveredNPCs.includes(q.npcIdx)) {
+                        gameState.discoveredNPCs.push(q.npcIdx);
+                        const npcName = discoveryNPCs[q.npcIdx];
+                        extraMsg += ` ${npcName}を発見！ NPCでサイドクエストを確認。`;
+                    }
+                }
+                if (q.side) {
+                    const ring = {
+                        name: `${statFull[q.focusStat]}の指輪`,
+                        stat: q.focusStat,
+                        bonus: 20,
+                        id: gameState.nextId++
+                    };
+                    gameState.inventory.push(ring);
+                    extraMsg += ` ${ring.name}を受け取りました！`;
+                }
+                if (q.type === 3 && q.item && Math.random() < 0.3) {
+                    const quantity = 1 + Math.floor(q.difficulty / 15);
+                    for (let k = 0; k < quantity; k++) {
+                        gameState.sellables.push({...q.item});
+                    }
+                    extraMsg = ` 冒険者がギルドのために追加の${quantity} ${q.item.name}${quantity > 1 ? 's' : ''}を持って帰りました！${extraMsg}`;
+                }
+                if (q.type === 0 && Math.random() < 0.2) {
+                    const numPerms = gameState.adventurers.filter(a => !a.temp).length;
+                    if (numPerms >= gameState.maxPermanentSlots) {
+                        extraMsg += `${extraMsg ? ' ' : ''}感銘を受けた冒険者が加わりたがったが、ギルドは満杯です。`;
+                    } else {
+                        const newAdv = generateKillRecruit(q.difficulty);
+                        gameState.adventurers.push(newAdv);
+                        extraMsg += `${extraMsg ? ' ' : ''}感銘を受けた冒険者${newAdv.name}があなたのギルドに加わることを決めました！`;
+                    }
+                }
+                let successMsg = `
+                クエスト: ${q.desc}<br>
+                チーム: ${adventurerNames.join('、')}<br>
+                ステータス: ${statDetails}<br>
+                ギルド報酬: +${rewardGold - payout}g (恒久者支払い: ${payout}g)<br>
+                評判: +${repGain.toFixed(1)}`;
+                if (extraMsg) {
+                    successMsg += `<br>追加: ${extraMsg}`;
+                }
+                gameState.eventHistory.unshift({day: eventDay, message: successMsg});
             } else {
                 const repLoss = q.difficulty * 2;
                 gameState.reputation -= repLoss;
-                gameState.eventHistory.unshift({day: eventDay, message: `Quest "${q.desc}" failed. Stats: ${statDetails} Reputation -${repLoss}.`});
+                let failMsg = `
+                クエスト: ${q.desc}<br>
+                失敗！<br>
+                ステータス: ${statDetails}<br>
+                評判: -${repLoss}`;
+                gameState.eventHistory.unshift({day: eventDay, message: failMsg});
             }
         }
-
         function playDay(){
             if (gameState.gameOver) return;
             const evDay=gameState.day; gameState.day++;
             // Pay tax if end of tax day
             if (evDay % 7 === 0) {
-                const tax = 2 * Math.pow(2, (evDay / 7) - 1);
+                const tax = Math.floor(gameState.gold * 0.2);
                 gameState.gold -= tax;
+                gameState.eventHistory.unshift({day: evDay, message: `税金の日！${tax}g (保有の20%) を徴収。`});
                 checkGameOver();
             }
             // Process active quests (assigned)
             for (let i = gameState.quests.length - 1; i >= 0; i--) {
                 const q = gameState.quests[i];
+                if (q.defense) continue; // Skip defense for now
                 if (q.assigned.length > 0) {
                     const teamStr = q.assigned.reduce((s, id) => s + getEffectiveStat(findAdv(id), 'strength'), 0);
                     const teamWis = q.assigned.reduce((s, id) => s + getEffectiveStat(findAdv(id), 'wisdom'), 0);
@@ -973,39 +1639,356 @@
                     const teamFocus = q.assigned.reduce((s, id) => s + getEffectiveStat(findAdv(id), q.focusStat), 0);
                     const excess = (teamFocus / q.minFocus) - 1;
                     const prob = Math.min(0.5, 0.1 + Math.max(0, excess) * 0.2);
-                    const successToday = Math.random() < prob;
+                    let successToday = Math.random() < prob;
+
+                    if (q.training && q.assigned.length > 0) {
+                        successToday = true; // トレーニングは常に即成功
+                    }
+
                     if (successToday) {
                         processQuestOutcome(q, evDay, true, false);
-                        gameState.quests.splice(i, 1);
-                        continue;
+                        if (!q.training) {
+                            gameState.quests.splice(i, 1); // トレーニングは削除しない
+                        }
                     } else {
-                        q.inProgress = true;
+                        if (!q.training) {
+                            q.inProgress = true;
+                        }
                     }
                 }
             }
             // Decrement daysLeft for remaining quests
-            gameState.quests.forEach(q => q.daysLeft--);
+            gameState.quests.forEach(q => {
+                if (!q.training) q.daysLeft--;
+            });
             // Handle expirations for remaining quests
             for (let i = gameState.quests.length - 1; i >= 0; i--) {
                 const q = gameState.quests[i];
+                if (q.defense || q.training) continue;
                 if (q.daysLeft <= 0) {
                     if (q.assigned.length > 0) {
                         processQuestOutcome(q, evDay, false, false);
                     } else {
                         const penalty = 0.5 * q.difficulty;
                         gameState.reputation -= penalty;
-                        gameState.eventHistory.unshift({day: evDay, message: `Ignored quest "${q.desc}" expired. Reputation -${penalty}.`});
+                        gameState.eventHistory.unshift({day: evDay, message: `無視されたクエスト "${q.desc}" が期限切れ。評判 -${penalty}。`});
                     }
                     gameState.quests.splice(i, 1);
                 }
             }
+            // Handle defense quest
+            const defenseQuest = gameState.quests.find(q => q.defense);
+            if (defenseQuest) {
+                gameState.quests = gameState.quests.filter(q => !q.defense);
+                if (defenseQuest.assigned.length === 0) {
+                    gameState.eventHistory.unshift({day: evDay, message: `防衛クエスト失敗！誰も割り当てられず、ギルドは崩壊。ゲームオーバー！`});
+                    gameState.gameOver = true;
+                    showModal(evDay);
+                    return;
+                } else {
+                    generateEnemies(defenseQuest);
+                    const team = defenseQuest.assigned.map(id => {
+                        const adv = findAdv(id);
+                        return adv ? {...adv, id: id} : null;
+                    }).filter(a => a);
+                    currentBattle = {
+                        quest: defenseQuest,
+                        day: evDay,
+                        team: team,
+                        enemies: defenseQuest.enemies.map(e => ({...e})),
+                        round: 0,
+                        actions: {},
+                        phase: 'setup',
+                        actionIndex: 0,
+                        combatants: []
+                    };
+                    document.getElementById('battleTitle').innerHTML = `防衛戦: ${defenseQuest.desc}`;
+                    document.getElementById('battleModal').style.display = 'flex';
+                    renderBattle();
+                    return;
+                }
+            }
             checkGameOver();
             showModal(evDay);
+        }       
+        
+        function renderBattle() {
+            const aliveAdv = currentBattle.team.filter(a => a.hp > 0).length;
+            const aliveEn = currentBattle.enemies.filter(e => e.hp > 0).length;
+            if (aliveAdv === 0) {
+                endBattle(false);
+                return;
+            }
+            if (aliveEn === 0) {
+                endBattle(true);
+                return;
+            }
+            // Top controls and log
+            let topHtml = '<div class="battle-top">';
+            let allSet = true;
+            if (currentBattle.phase === 'setup') {
+                allSet = currentBattle.team.filter(a => a.hp > 0).every(a => {
+                    const act = currentBattle.actions[a.id] || {};
+                    return act.type && (act.type === 'defense' || act.target);
+                });
+                topHtml += `<button id="battleControl" ${!allSet ? 'disabled' : ''} onclick="startRound()">${allSet ? `Start Round ${currentBattle.round + 1}` : 'Set All Actions'}</button>`;
+                topHtml += '<div id="battleLog"><p>Set actions for the round.</p></div>';
+            } else {
+                topHtml += `<button id="battleControl" onclick="nextAction()">Next Action</button>`;
+                topHtml += '<div id="battleLog"></div>';
+            }
+            topHtml += '</div>';
+            // Enemies: Horizontal row
+            let enemiesHtml = '<div class="battle-section"><h3>敵 (上)</h3><div class="battle-enemies">';
+            currentBattle.enemies.filter(e => e.hp > 0).forEach(e => {
+                const hpPct = (e.hp / e.maxHp) * 100;
+                const mpPct = (e.mp / e.maxMp) * 100;
+                enemiesHtml += `
+                    <div class="battle-enemy" id="div_${e.id}" data-id="${e.id}" onclick="selectEnemyForCurrentAdv('${e.id}')">
+                        <img src="${e.image}" class="enemy-img" alt="${e.name}">
+                        <div>${e.name}</div>
+                        <div class="hp-display" id="hp_${e.id}">HP: <div class="progress-bar"><div class="progress-fill hp-fill" style="width:${hpPct}%"></div></div> ${e.hp}/${e.maxHp}</div>
+                        <div class="mp-display" id="mp_${e.id}">MP: <div class="progress-bar"><div class="progress-fill mp-fill" style="width:${mpPct}%"></div></div> ${e.mp}/${e.maxMp}</div>
+                    </div>
+                `;
+            });
+            enemiesHtml += '</div></div>';
+            // Team: Horizontal row
+            let teamHtml = '<div class="battle-section"><h3>チーム (下)</h3><div class="battle-team">';
+            currentBattle.team.filter(adv => adv.hp > 0).forEach(adv => {
+                const hpPct = (adv.hp / adv.maxHp) * 100;
+                const mpPct = (adv.mp / adv.maxMp) * 100;
+                let actionHtml = '';
+                if (currentBattle.phase === 'setup') {
+                    const act = currentBattle.actions[adv.id] || {};
+                    const isAttack = ['physical', 'magic'].includes(act.type);
+                    const targetName = act.target ? currentBattle.enemies.find(e => e.id === act.target)?.name : 'なし';
+                    const selectingNote = currentSelectingAdvId === adv.id ? '<br><em>(敵をクリックして対象を選択)</em>' : '';
+                    actionHtml = `
+                        <button onclick="setAction(${adv.id}, 'physical')">Physical (STR)</button>
+                        <button onclick="setAction(${adv.id}, 'magic')">Magic (WIS, -10 MP)</button>
+                        <button onclick="setAction(${adv.id}, 'defense')">Defense</button>
+                        <br>行動: ${act.type || '未選択'}
+                        ${isAttack ? `<br>選択対象: ${targetName}` : ''}
+                        ${selectingNote}
+                    `;
+                }
+                teamHtml += `
+                    <div class="team-member" id="div_${adv.id}" data-id="${adv.id}">
+                        <div class="adventurer-card">
+                            <img src="${adv.image}" class="adventurer-img" alt="${adv.name}">
+                            ${getNameHtml(adv)}
+                            <br>
+                            <div class="hp-display" id="hp_${adv.id}">HP: <div class="progress-bar"><div class="progress-fill hp-fill" style="width:${hpPct}%"></div></div> ${adv.hp}/${adv.maxHp}</div>
+                            <br>
+                            <div class="mp-display" id="mp_${adv.id}">MP: <div class="progress-bar"><div class="progress-fill mp-fill" style="width:${mpPct}%"></div></div> ${adv.mp}/${adv.maxMp}</div>
+                        </div>
+                        <div class="actions">${actionHtml}</div>
+                    </div>
+                `;
+            });
+            teamHtml += '</div></div>';
+            document.getElementById('battleContent').innerHTML = topHtml + enemiesHtml + teamHtml;
+            // Highlight selectable enemies
+            const enemyDivs = document.querySelectorAll('.battle-enemy');
+            enemyDivs.forEach(div => div.classList.remove('selectable'));
+            if (currentSelectingAdvId) {
+                enemyDivs.forEach(div => div.classList.add('selectable'));
+            }
         }
-
+        function setAction(advId, type) {
+            let act = currentBattle.actions[advId] || {};
+            act.type = type;
+            if (type === 'defense') act.target = null;
+            currentBattle.actions[advId] = act;
+            currentSelectingAdvId = (type === 'physical' || type === 'magic') ? advId : null;
+            renderBattle();
+        }
+        function selectEnemyForCurrentAdv(targetId) {
+            if (currentSelectingAdvId) {
+                const act = currentBattle.actions[currentSelectingAdvId];
+                if (act && (act.type === 'physical' || act.type === 'magic')) {
+                    act.target = targetId;
+                }
+                currentSelectingAdvId = null;
+            }
+            renderBattle();
+        }
+        function startRound() {
+            // Set enemy actions
+            currentBattle.enemies.filter(e => e.hp > 0).forEach(e => {
+                const aliveAdv = currentBattle.team.filter(a => a.hp > 0);
+                if (aliveAdv.length > 0) {
+                    const randTarget = aliveAdv[Math.floor(Math.random() * aliveAdv.length)];
+                    e.action = { type: 'physical', target: randTarget.id };
+                }
+            });
+            // Sort combatants by dexterity (descending)
+            currentBattle.combatants = [...currentBattle.team.filter(a => a.hp > 0), ...currentBattle.enemies.filter(e => e.hp > 0)];
+            currentBattle.combatants.sort((a, b) => getEffectiveStat(b, 'dexterity') - getEffectiveStat(a, 'dexterity'));
+            currentBattle.actionIndex = 0;
+            currentBattle.phase = 'executing';
+            renderBattle();
+            const logEl = document.getElementById('battleLog');
+            logEl.innerHTML = `<p>Round ${currentBattle.round + 1} starting...</p>`;
+        }
+        function executeAction() {
+            // Auto-skip dead combatants or those without actions
+            while (currentBattle.actionIndex < currentBattle.combatants.length) {
+                const c = currentBattle.combatants[currentBattle.actionIndex];
+                if (c.hp <= 0) {
+                    currentBattle.actionIndex++;
+                    continue;
+                }
+                const isPlayer = !c.id.toString().startsWith('enemy_');
+                const act = isPlayer ? currentBattle.actions[c.id] : c.action;
+                if (!act) {
+                    currentBattle.actionIndex++;
+                    continue;
+                }
+                // Found a valid action: process it (one per click)
+                const logEl = document.getElementById('battleLog');
+                if (act.type === 'defense') {
+                    c.defending = true;
+                    logEl.innerHTML = `<p>${c.name} が防御の構えを取った！</p>`;
+                } else {
+                    let target = null;
+                    let dmg = 0;
+                    if (isPlayer) {
+                        target = currentBattle.enemies.find(e => e.id === act.target);
+                    } else {
+                        if (c.action && c.action.target) {
+                            target = currentBattle.team.find(a => a.id === c.action.target);
+                        } else {
+                            const aliveTeam = currentBattle.team.filter(a => a.hp > 0);
+                            if (aliveTeam.length > 0) {
+                                target = aliveTeam[Math.floor(Math.random() * aliveTeam.length)];
+                            }
+                        }
+                    }
+                    if (!target || target.hp <= 0) {
+                        currentBattle.actionIndex++;
+                        continue; // Skip invalid target, loop to next
+                    }
+                    if (act.type === 'physical') {
+                        dmg = getEffectiveStat(c, 'strength') * (1 + Math.random() * 0.5);
+                    } else if (act.type === 'magic') {
+                        if (isPlayer) c.mp = Math.max(0, c.mp - 10);
+                        dmg = getEffectiveStat(c, 'wisdom') * (1.5 + Math.random() * 0.5);
+                    }
+                    let finalDmg = dmg;
+                    if (target.defending) {
+                        finalDmg *= 0.5;
+                        target.defending = false;
+                    }
+                    target.hp = Math.max(0, target.hp - finalDmg);
+                    if (finalDmg > 0) {
+                        if (act.type === 'physical') {
+                            strSound.currentTime = 0; // Reset to start for overlapping plays
+                            strSound.play().catch(e => console.log('STR sound error:', e));
+                        } else if (act.type === 'magic') {
+                            wisSound.currentTime = 0; // Reset to start for overlapping plays
+                            wisSound.play().catch(e => console.log('WIS sound error:', e));
+                        }
+                    }
+                    const typeStr = act.type === 'physical' ? '物理攻撃' : '魔法攻撃';
+                    const msg = `${c.name} の ${typeStr}！ ${target.name} に ${Math.floor(finalDmg)} ダメージ！ (残りHP: ${Math.floor(target.hp)})`;
+                    logEl.innerHTML = `<p>${msg}</p>`;
+                    // Update HP display
+                    const newHpPct = Math.max(0, (target.hp / target.maxHp) * 100);
+                    const hpEl = document.getElementById(`hp_${target.id}`);
+                    if (hpEl) {
+                        hpEl.innerHTML = `HP: <div class="progress-bar"><div class="progress-fill hp-fill" style="width:${newHpPct}%"></div></div> ${Math.floor(target.hp)}/${target.maxHp}`;
+                    }
+                    // Damage popup
+                    const targetDiv = document.getElementById(`div_${target.id}`);
+                    if (targetDiv) {
+                        let popup = document.createElement('div');
+                        popup.className = 'damage-popup';
+                        popup.textContent = `-${Math.floor(finalDmg)}`;
+                        targetDiv.appendChild(popup);
+                        setTimeout(() => {
+                            if (popup.parentNode) popup.remove();
+                        }, 800);
+                    }
+                    // Update MP if magic
+                    if (act.type === 'magic' && isPlayer) {
+                        const newMpPct = Math.max(0, (c.mp / c.maxMp) * 100);
+                        const mpEl = document.getElementById(`mp_${c.id}`);
+                        if (mpEl) {
+                            mpEl.innerHTML = `MP: <div class="progress-bar"><div class="progress-fill mp-fill" style="width:${newMpPct}%"></div></div> ${Math.floor(c.mp)}/${c.maxMp}`;
+                        }
+                    }
+                }
+                currentBattle.actionIndex++;
+                // Check win/loss after action
+                const aliveAdv = currentBattle.team.filter(a => a.hp > 0).length;
+                const aliveEn = currentBattle.enemies.filter(e => e.hp > 0).length;
+                if (aliveAdv === 0) {
+                    endBattle(false);
+                    return;
+                }
+                if (aliveEn === 0) {
+                    endBattle(true);
+                    return;
+                }
+                return; // Stop after one valid action
+            }
+            // No more valid actions: end the round
+            endRound();
+        }
+        function endRound() {
+            // Reset all defends/actions
+            currentBattle.team.forEach(a => {
+                a.defending = false;
+                delete currentBattle.actions[a.id];
+            });
+            currentBattle.enemies.forEach(e => {
+                e.defending = false;
+                delete e.action;
+            });
+            currentBattle.round++;
+            currentBattle.phase = 'setup';
+            renderBattle();
+        }
+        function nextAction() {
+            executeAction();
+        }
+  
+        function closeBattle() {
+            endBattle(false);
+        }
+        function endBattle(win) {
+            document.getElementById('battleModal').style.display = 'none';
+            const q = currentBattle.quest;
+            const day = currentBattle.day;
+            // Apply damage to originals
+            currentBattle.team.forEach(battleAdv => {
+                const origAdv = findAdv(battleAdv.id);
+                if (origAdv) {
+                    origAdv.hp = battleAdv.hp;
+                    origAdv.mp = battleAdv.mp;
+                    if (battleAdv.hp <= 0) {
+                        gameState.reputation = Math.max(-100, gameState.reputation - 10);
+                        gameState.eventHistory.unshift({day: day, message: `${battleAdv.name} が防衛戦で死亡！ 評判 -10。`});
+                        const idx = gameState.adventurers.findIndex(a => a.id === battleAdv.id);
+                        if (idx > -1) gameState.adventurers.splice(idx, 1);
+                    }
+                }
+            });
+            if (win) {
+                let teamLUC = currentBattle.team.reduce((sum, a) => sum + getEffectiveStat(a, 'luck'), 0);
+                q.reward = Math.floor(teamLUC * (Math.floor(gameState.reputation) + 1) * 0.5);
+                processQuestOutcome(q, day, true, false, q.reward);
+            } else {
+                gameState.eventHistory.unshift({day: day, message: '防衛戦で全滅！ギルドは陥落しました。ゲームオーバー！'});
+                gameState.gameOver = true;
+            }
+            currentBattle = null;
+            showModal(day);
+        }
         let currentDayEvents = [];
         let currentPage = 0;
-
         function showModal(day) {
             currentDayEvents = gameState.eventHistory.filter(e => e.day === day);
             if (currentDayEvents.length === 0) {
@@ -1016,76 +1999,64 @@
             document.getElementById('eventModal').style.display = 'flex';
             updateModal();
         }
-
         function updateModal() {
             const modalTitle = document.getElementById('modalTitle');
             const modalContent = document.getElementById('modalContent');
             const pageInfo = document.getElementById('pageInfo');
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
-
             if (currentDayEvents.length === 0) {
                 closeModal();
                 return;
             }
-
-            modalTitle.innerHTML = `Day ${currentDayEvents[0].day} Events`;
+            modalTitle.innerHTML = `日 ${currentDayEvents[0].day} のイベント`;
             modalContent.innerHTML = `<p><strong>${currentDayEvents[currentPage].message}</strong></p>`;
-            pageInfo.innerHTML = `Page ${currentPage + 1} of ${currentDayEvents.length}`;
+            pageInfo.innerHTML = `ページ ${currentPage + 1} / ${currentDayEvents.length}`;
             prevBtn.style.display = currentPage > 0 ? 'inline-block' : 'none';
             nextBtn.style.display = currentPage < currentDayEvents.length - 1 ? 'inline-block' : 'none';
         }
-
         function prevPage() {
             if (currentPage > 0) {
                 currentPage--;
                 updateModal();
             }
         }
-
         function nextPage() {
             if (currentPage < currentDayEvents.length - 1) {
                 currentPage++;
                 updateModal();
             }
         }
-
         function closeModal() {
             document.getElementById('eventModal').style.display = 'none';
             if (!gameState.gameOver) {
                 startDay();
             }
         }
-
         /* ==================== DRAG & DROP ==================== */
         let draggedAdvId=null;
-
         document.addEventListener('dragstart', e=>{
             if(e.target.classList.contains('adventurer-card')){
                 draggedAdvId=e.target.dataset.advId;
                 e.target.classList.add('dragging');
             }
         });
-
         document.addEventListener('dragend', e=>{
             if(e.target.classList.contains('adventurer-card')){
                 e.target.classList.remove('dragging');
             }
         });
-
         function allowDrop(e){
             e.preventDefault();
             if(e.currentTarget.classList.contains('quest-card')){
                 e.currentTarget.classList.add('drag-over');
             }
         }
-
         function dragLeave(e){
             if(e.currentTarget.classList.contains('quest-card')){
                 e.currentTarget.classList.remove('drag-over');
             }
         }
-
         function drop(e){
             e.preventDefault();
             if(e.currentTarget.classList.contains('quest-card')){
@@ -1097,8 +2068,17 @@
                 draggedAdvId=null;
             }
         }
-
         startDay();
+        // BGMの音量設定（任意：0.0-1.0で調整）
+        document.getElementById('bgm').volume = 0.3;
+        // 初回クリックでBGM再生（一度だけ実行）
+        let audioPlayed = false;
+        document.addEventListener('click', function() {
+            if (!audioPlayed) {
+                document.getElementById('bgm').play().catch(e => console.log('BGM再生エラー:', e));
+                audioPlayed = true;
+            }
+        }, { once: true });
     </script>
 </body>
 </html>
